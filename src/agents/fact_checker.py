@@ -7,7 +7,7 @@ class FactCheckResult(BaseModel):
         description="True if the current simplified text is accurate according to the original complex text and preserves all core information. False if there are hallucinations or omissions."
     )
     feedback: str = Field(
-        description="Specific instructions for the Simplifier on what facts to correct or what core information is missing. Empty string if accurate."
+        description="Specific instructions for the Simplifier Agent on what facts to correct or what core information is missing. Empty string if accurate."
     )
 
 def node_fact_checker(state: dict) -> dict:
@@ -45,7 +45,6 @@ def node_fact_checker(state: dict) -> dict:
         "current_simplified_text": state["current_simplified_text"]
     })
     
-    # Format the feedback to append to the history if it failed
     feedback_to_append = []
     if not result.is_accurate:
         feedback_to_append.append(f"[FACT-CHECKER FEEDBACK]: {result.feedback}")
