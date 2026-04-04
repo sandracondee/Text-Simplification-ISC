@@ -3,7 +3,7 @@ import operator
 
 class GraphState(TypedDict):
     complex_text: str
-    reference_text: List[str]
+    reference_text: str
     core_information: str
     current_simplified_text: str
     feedback_history: Annotated[List[str], operator.add]
