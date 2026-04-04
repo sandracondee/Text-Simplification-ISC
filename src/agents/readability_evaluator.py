@@ -2,19 +2,23 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.tools.metrics import evaluator
+from langchain_core.tools import tool
 
 class ReadabilityResult(BaseModel):
     is_readable: bool = Field(
         description="True if metrics are acceptable and no unexplained jargon is found. False otherwise."
     )
     readability_feedback: str = Field(
-        description="Specific instructions for the Simplifier Agent on what terms to explain or sentences to simplify. Empty string if everithing is ok."
+        description="Specific instructions for the Simplifier Agent on what terms to explain or sentences to simplify. Empty string if everithing is perfect."
     )
+    metrics_report: dict = Field(
+        description="The SARI, BLEU, and BERTScore values obtained from the tool."
+        )
 
 def node_readability_evaluator(state: dict) -> dict:
-    print("="*50)
+    print("="*20)
     print(" READABILITY EVALUATOR AGENT ")
-    print("="*50)
+    print("="*20)
 
     @tool
     def calculate_metrics(simplified_text_to_evaluate: str) -> dict:
@@ -61,5 +65,6 @@ def node_readability_evaluator(state: dict) -> dict:
 
     return {
         "is_approved": result.is_readable, 
-        "feedback_history": feedback_to_append
+        "feedback_history": feedback_to_append,
+        "current_metrics": result.metrics_report
     }

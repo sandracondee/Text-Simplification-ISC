@@ -11,9 +11,9 @@ class FactCheckResult(BaseModel):
     )
 
 def node_fact_checker(state: dict) -> dict:
-    print("="*50)
+    print("="*20)
     print(" FACT-CHECKER AGENT ")
-    print("="*50)
+    print("="*20)
     
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.0)
     

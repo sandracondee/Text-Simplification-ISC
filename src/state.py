@@ -6,6 +6,7 @@ class GraphState(TypedDict):
     reference_text: str
     core_information: str
     current_simplified_text: str
+    current_metrics: dict
     feedback_history: Annotated[List[str], operator.add]
     iteration_count: int
     is_approved: bool
