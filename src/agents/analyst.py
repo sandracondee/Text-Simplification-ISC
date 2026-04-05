@@ -20,7 +20,7 @@ def node_analyst(state: dict) -> dict:
     system_prompt = """You are an expert Clinical Data Analyst specialized in biomedical literature. 
     Your task is to analyze the original medical text and extract its core components to ensure no critical data is lost later.
 
-    Focus strictly on the PICO framework:
+    Focus on this main points:
     1. Population/Patient/Problem: Who was studied?
     2. Intervention: What was the treatment or action?
     3. Comparison: What was the control or alternative?

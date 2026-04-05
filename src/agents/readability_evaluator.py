@@ -38,15 +38,23 @@ def node_readability_evaluator(state: dict) -> dict:
     llm_with_tools = llm.bind_tools([calculate_metrics])
     readability_agent = llm_with_tools.with_structured_output(ReadabilityResult)
     
-    system_prompt = """You are an expert NLP Quality Evaluator.
+    system_prompt = """You are an expert NLP Quality Evaluator and your goal is to ensure a medical text is accessible to general audience.
     You MUST use the `calculate_metrics` tool first to get SARI, BLEU, and BERTScore_F1.
     
-    Evaluation Rules:
-    1. Check the metric results. If SARI is too low, simplification operations were poor.
-    2. Read the draft and identify any remaining medical jargon that a layperson wouldn't understand.
-    3. If the text is dense or uses complex vocabulary, reject it.
+    EVALUATION CRITERIA:
+    1. SARI & BERTScore: SARI can be naturally lower (15-25 is normal) because clinical terms cannot be deleted. Check if BERTScore > 0.2 to ensure no medical facts were altered.
+    2. Contextual Vocabulary (CRITICAL TOLERANCE): The target audience are not children. 
+    - YOU MUST ALLOW common disease names, standard trial terms (e.g., "placebo", "morbidity"), and specific metrics IF they are briefly contextualized (e.g., "HbA1c, a measurement of glucose control").
+    - DO NOT reject a simplification just because it contains these words.
+    - You should ONLY penalize bureaucratic academic phrasing (e.g., "allocation concealment") or overly complex statistical jargon (e.g., "95% CI 0.57 to 0.86") if left unsimplified.
+
+    DECISION RULES:
+    - APPROVE (is_readable=True) IF: The text resembles a standard medical summary. It flows naturally, explains highly obscure jargon, but rightly retains necessary clinical terminology and disease names. 
+    - REJECT (is_readable=False) IF: The text is basically a copy of the academic abstract, retaining dense statistical brackets, bureaucratic study design jargon without explanation, or if the metrics drop indicating a loss of facts.
     
-    Provide specific feedback based on the metrics and the vocabulary used."""
+    FEEDBACK INSTRUCTIONS:
+    If you reject the draft, your feedback must be specific and actionable.
+    You MUST list the exact words, acronyms or sentences that caused the rejection."""
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),

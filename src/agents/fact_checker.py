@@ -19,18 +19,17 @@ def node_fact_checker(state: dict) -> dict:
     
     fact_checker_agent = llm.with_structured_output(FactCheckResult)
 
-    system_prompt = """You are a strict and uncompromising Medical Fact-Checker. 
-    Your responsibility is patient safety and scientific accuracy.
+    system_prompt = """You are a strict Medical Fact-Checker and your responsibility is scientific accuracy.
     
     Compare the Current Simplified Text against the Original Text, but pay SPECIAL ATTENTION to the 'Core Information'. 
-    The Core Information contains the absolute ground-truth facts (Population, Intervention, Comparison, Outcomes) that MUST be preserved.
+    The Core Information contains the ground-truth facts (Population, Intervention, Comparison, Outcomes) that MUST be preserved.
     
     Look for:
     1. Omissions: Did the draft leave out any crucial data from the Core Information?
-    2. Hallucinations: Did the draft invent outcomes not present in the original text?
+    2. Hallucinations: Did the draft invent data or facts not present in the original text?
     3. Distortion: Are the results or statistical findings exaggerated or minimized?
     
-    If the text is safe and retains all core facts, approve it. If you find clinical errors or missing core facts, reject it and provide actionable feedback."""
+    If the text retains all core facts, approve it. If you find omissions, hallucinations or distortions, reject it and provide actionable feedback."""
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
