@@ -1,8 +1,9 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from src.tools.metrics import evaluator
 from langchain_core.tools import tool
+from src.agents.llm_factory import build_chat_llm
+from src.tools.metrics import evaluator
 
 class ReadabilityResult(BaseModel):
     is_readable: bool = Field(
@@ -13,13 +14,9 @@ class ReadabilityResult(BaseModel):
     )
     metrics_report: dict = Field(
         description="The SARI, BLEU, and BERTScore values obtained from the tool."
-        )
+    )
 
 def node_readability_evaluator(state: dict) -> dict:
-    print("="*20)
-    print(" READABILITY EVALUATOR AGENT ")
-    print("="*20)
-
     @tool
     def calculate_metrics(simplified_text_to_evaluate: str) -> dict:
         """
@@ -33,7 +30,7 @@ def node_readability_evaluator(state: dict) -> dict:
             reference_text=state["reference_text"]
         )
     
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.0)
+    llm = build_chat_llm(temperature=0.3)
     
     llm_with_tools = llm.bind_tools([calculate_metrics])
     readability_agent = llm_with_tools.with_structured_output(ReadabilityResult)

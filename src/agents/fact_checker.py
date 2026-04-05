@@ -1,6 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
+from src.agents.llm_factory import build_chat_llm
 
 class FactCheckResult(BaseModel):
     is_accurate: bool = Field(
@@ -11,25 +11,25 @@ class FactCheckResult(BaseModel):
     )
 
 def node_fact_checker(state: dict) -> dict:
-    print("="*20)
-    print(" FACT-CHECKER AGENT ")
-    print("="*20)
     
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.0)
+    llm = build_chat_llm(temperature=0.0)
     
     fact_checker_agent = llm.with_structured_output(FactCheckResult)
 
-    system_prompt = """You are a strict Medical Fact-Checker and your responsibility is scientific accuracy.
+    system_prompt = """You are a Medical Fact-Checker for PLAIN LANGUAGE SUMMARIES (PLS).
     
-    Compare the Current Simplified Text against the Original Text, but pay SPECIAL ATTENTION to the 'Core Information'. 
+    Compare the Current Simplified Text against the Original Text, paying SPECIAL ATTENTION to the 'Core Information'. 
     The Core Information contains the ground-truth facts (Population, Intervention, Comparison, Outcomes) that MUST be preserved.
-    
+
+    Do NOT penalize the draft for translating academic terms into everyday language. For example, translating "no statistically significant difference" to "didn't make a difference" or "was no better than" is EXACTLY what we want. This is NOT a distortion.
+    Do NOT demand the inclusion of trial design terms (e.g., "allocation concealment", "blinding", "monopreparations", "risk of bias"). Patients do not need this.
+
     Look for:
     1. Omissions: Did the draft leave out any crucial data from the Core Information?
     2. Hallucinations: Did the draft invent data or facts not present in the original text?
     3. Distortion: Are the results or statistical findings exaggerated or minimized?
-    
-    If the text retains all core facts, approve it. If you find omissions, hallucinations or distortions, reject it and provide actionable feedback."""
+
+    If the medical truth is preserved in simple words, APPROVE IT. Only reject if they hallucinate a completely fake benefit or omit a deadly side effect. If you decide to reject it provide actionable feedback."""
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),

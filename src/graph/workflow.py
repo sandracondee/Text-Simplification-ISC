@@ -70,4 +70,5 @@ def build_graph():
             END: END
         }
     )
+
     return workflow.compile()

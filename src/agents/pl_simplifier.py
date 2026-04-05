@@ -1,6 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
+from src.agents.llm_factory import build_chat_llm
 
 class SimplificationResult(BaseModel):
     current_simplified_text: str = Field(
@@ -9,11 +9,11 @@ class SimplificationResult(BaseModel):
     )
 
 def node_pl_simplifier(state: dict) -> dict:
-    print("="*20)
+    print("="*40)
     print(" PLAIN LANGUAGE SIMPLIFIER AGENT ")
-    print("="*20)
+    print("="*40)
     
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3)
+    llm = build_chat_llm(temperature=0.3)
     
     simplifier_agent = llm.with_structured_output(SimplificationResult)
     

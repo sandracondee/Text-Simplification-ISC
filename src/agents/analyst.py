@@ -1,6 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
+from src.agents.llm_factory import build_chat_llm
 
 class AnalystResult(BaseModel):
     core_information: str = Field(
@@ -9,22 +9,22 @@ class AnalystResult(BaseModel):
     )
 
 def node_analyst(state: dict) -> dict:
-    print("="*20)
+    print("="*40)
     print(" ANALYST AGENT ")
-    print("="*20)
+    print("="*40)
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.0)
+    llm = build_chat_llm(temperature=0.3)
 
     extractor_agent = llm.with_structured_output(AnalystResult)
     
     system_prompt = """You are an expert Clinical Data Analyst specialized in biomedical literature. 
-    Your task is to analyze the original medical text and extract its core components to ensure no critical data is lost later.
+    Your task is to analyze the original medical text and extract its core components to ensure no critical data is lost in the later simplification.
 
     Focus on this main points:
-    1. Population/Patient/Problem: Who was studied?
-    2. Intervention: What was the treatment or action?
-    3. Comparison: What was the control or alternative?
-    4. Outcomes: What were the main results, statistical findings, and side effects?
+    - Population/Patient/Problem: Who was studied?
+    - Intervention: What was the treatment or action?
+    - Comparison: What was the control or alternative?
+    - Outcomes: What were the main results, statistical findings, and side effects?
 
     Additionally, list any highly technical medical terms (jargon) that appear in the text.
     DO NOT simplify the text. Only extract and organize the facts."""
