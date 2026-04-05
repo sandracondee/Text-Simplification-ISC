@@ -50,6 +50,6 @@ def node_fact_checker(state: dict) -> dict:
         feedback_to_append.append(f"[FACT-CHECKER FEEDBACK]: {result.feedback}")
     
     return {
-        "is_approved": result.is_accurate, 
+        "is_fact_approved": result.is_accurate, 
         "feedback_history": feedback_to_append
     }

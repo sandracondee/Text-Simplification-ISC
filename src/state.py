@@ -9,4 +9,6 @@ class GraphState(TypedDict):
     current_metrics: dict
     feedback_history: Annotated[List[str], operator.add]
     iteration_count: int
+    is_fact_approved: bool
+    is_readability_approved: bool
     is_approved: bool

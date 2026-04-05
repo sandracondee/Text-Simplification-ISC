@@ -64,7 +64,7 @@ def node_readability_evaluator(state: dict) -> dict:
         feedback_to_append.append(f"[READABILITY EVALUATOR FEEDBACK]: {result.readability_feedback}")
 
     return {
-        "is_approved": result.is_readable, 
+        "is_readability_approved": result.is_readable, 
         "feedback_history": feedback_to_append,
         "current_metrics": result.metrics_report
     }

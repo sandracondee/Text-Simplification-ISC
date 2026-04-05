@@ -12,15 +12,13 @@ def node_final_approval(state: GraphState) -> dict:
     Returns the final approval result: True if both evaluators approve the simplification, False otherwise.
     It also ensures the metrics report is passed to the final state.
     """
-    readability_result = node_readability_evaluator(state)
-    
-    # If Fact-Checker already rejected it, the final approval is False (even if readability is perfect)
-    final_approval = state.get("is_approved", True) and readability_result.get("is_approved", True)
-    
+    fact_ok = state.get("is_fact_approved", False)
+    read_ok = state.get("is_readability_approved", False)
+
+    final_approval = fact_ok and read_ok
+
     return {
-        "is_approved": final_approval,
-        "feedback_history": readability_result.get("feedback_history", []),
-        "current_metrics": readability_result.get("current_metrics", {})
+        "is_approved": final_approval
     }
 
 def router_logic(state: GraphState) -> str:
@@ -52,16 +50,20 @@ def build_graph():
     workflow.add_node("analyst", node_analyst)
     workflow.add_node("simplifier", node_pl_simplifier)
     workflow.add_node("fact_checker", node_fact_checker)
-    workflow.add_node("readability_evaluator", node_final_approval)
+    workflow.add_node("readability_evaluator", node_readability_evaluator)
+    workflow.add_node("final_approval", node_final_approval)
 
     workflow.add_edge(START, "analyst")
     workflow.add_edge("analyst", "simplifier")
     
     workflow.add_edge("simplifier", "fact_checker")
-    workflow.add_edge("fact_checker", "readability_evaluator")
+    workflow.add_edge("simplifier", "readability_evaluator")
+
+    workflow.add_edge("fact_checker", "final_approval")
+    workflow.add_edge("readability_evaluator", "final_approval")
 
     workflow.add_conditional_edges(
-        "readability_evaluator",
+        "final_approval",
         router_logic,
         {
             "simplifier": "simplifier",
