@@ -1,72 +1,78 @@
 from langgraph.graph import END, StateGraph, START
 from src.state import GraphState
-from src.agents.analyst import node_analyst
-from src.agents.pl_simplifier import node_pl_simplifier
+from src.agents.pl_simplifier import node_parallel_drafters
+from src.agents.judge import node_judge
 from src.agents.fact_checker import node_fact_checker
 from src.agents.readability_evaluator import node_readability_evaluator
+from src.agents.editor import node_editor
 
 MAX_ITER = 3
 
-def node_final_approval(state: GraphState) -> dict:
+def node_auditors(state: GraphState) -> dict:
     """
-    Returns the final approval result: True if both evaluators approve the simplification, False otherwise.
-    It also ensures the metrics report is passed to the final state.
+    Aggregates both auditor decisions into a single approval flag.
     """
     fact_ok = state.get("is_fact_approved", False)
     read_ok = state.get("is_readability_approved", False)
 
-    final_approval = fact_ok and read_ok
-
     return {
-        "is_approved": final_approval
+        "is_approved": fact_ok and read_ok
     }
 
 def router_logic(state: GraphState) -> str:
     """
-    Decides the next step after the evaluation phase.
+    Decides the next step after the parallel auditing phase.
     """
-    print(f"\n--- ROUTER: Iteration {state['iteration_count']}, Approved: {state['is_approved']} ---")
-    
-    # Both evaluators approved the text
-    if state["is_approved"]:
-        print("-> SIMPLIFICATION APPROVED.")
+    fact_ok = state.get("is_fact_approved", False)
+    readability_ok = state.get("is_readability_approved", False)
+    approved = fact_ok and readability_ok
+
+    print(
+        f"\n--- ROUTER: Iteration {state.get('iteration_count', 0)}, "
+        f"Fact: {fact_ok}, Readability: {readability_ok} ---"
+    )
+
+    if approved:
+        print("-> AUDIT APPROVED. Workflow finished.")
         return END
-    
-    # Simplification rejected, but the max loops have been reached
+
     if state["iteration_count"] >= MAX_ITER:
-        print(f"-> MAX ITERATIONS REACHED {MAX_ITER}. Simplification finished.")
+        print(f"-> MAX ITERATIONS REACHED ({MAX_ITER}). Workflow finished.")
         return END
-        
-    # Simplification rejected and there are attempts left
-    print("-> SIMPLIFICATION REJECTED. Simplification will be improved.")
-    return "simplifier"
+
+    print("-> AUDIT REJECTED. Routing to editor for correction.")
+    return "editor"
 
 def build_graph():
     """
-    Constructs and compiles the Multi-Agent State Graph.
+    Constructs and compiles the MoA State Graph using Draft-Select-Audit-Edit.
     """
     workflow = StateGraph(GraphState)
 
-    workflow.add_node("analyst", node_analyst)
-    workflow.add_node("simplifier", node_pl_simplifier)
+    workflow.add_node("parallel_drafters", node_parallel_drafters)
+    workflow.add_node("judge", node_judge)
     workflow.add_node("fact_checker", node_fact_checker)
     workflow.add_node("readability_evaluator", node_readability_evaluator)
-    workflow.add_node("final_approval", node_final_approval)
+    workflow.add_node("auditors", node_auditors)
+    workflow.add_node("editor", node_editor)
 
-    workflow.add_edge(START, "analyst")
-    workflow.add_edge("analyst", "simplifier")
-    
-    workflow.add_edge("simplifier", "fact_checker")
-    workflow.add_edge("simplifier", "readability_evaluator")
+    workflow.add_edge(START, "parallel_drafters")
+    workflow.add_edge("parallel_drafters", "judge")
 
-    workflow.add_edge("fact_checker", "final_approval")
-    workflow.add_edge("readability_evaluator", "final_approval")
+    workflow.add_edge("judge", "fact_checker")
+    workflow.add_edge("judge", "readability_evaluator")
+
+    workflow.add_edge("editor", "fact_checker")
+    workflow.add_edge("editor", "readability_evaluator")
+
+    workflow.add_edge("fact_checker", "auditors")
+    workflow.add_edge("readability_evaluator", "auditors")
 
     workflow.add_conditional_edges(
-        "final_approval",
+        "auditors",
         router_logic,
         {
-            "simplifier": "simplifier",
+            "editor": "editor",
             END: END
         }
     )

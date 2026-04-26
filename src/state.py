@@ -1,10 +1,11 @@
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated, List, Dict
 import operator
 
 class GraphState(TypedDict):
     complex_text: str
     reference_text: str
-    core_information: str
+    drafts: Dict[str, str]
+    selected_draft_letter: str
     current_simplified_text: str
     current_metrics: dict
     feedback_history: Annotated[List[str], operator.add]

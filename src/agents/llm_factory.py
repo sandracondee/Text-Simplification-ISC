@@ -1,5 +1,6 @@
 import os
 import importlib
+from typing import Optional
 
 
 def _is_local_mode_enabled() -> bool:
@@ -13,7 +14,7 @@ def _resolve_provider() -> str:
     return "ollama" if _is_local_mode_enabled() else "gemini"
 
 
-def build_chat_llm(temperature: float = 0.0):
+def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None):
     provider = _resolve_provider()
 
     if provider == "ollama":
@@ -26,7 +27,7 @@ def build_chat_llm(temperature: float = 0.0):
                 "Install it with: pip install langchain-ollama"
             ) from exc
 
-        model_name = os.getenv("OLLAMA_MODEL", "mistral")
+        model_name = model or os.getenv("OLLAMA_MODEL", "mistral")
         base_url = os.getenv("OLLAMA_BASE_URL", "").strip()
 
         kwargs = {
@@ -48,7 +49,7 @@ def build_chat_llm(temperature: float = 0.0):
                 "Install it with: pip install langchain-google-genai"
             ) from exc
 
-        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+        model_name = model or os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
         return ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
 
     raise ValueError(

@@ -18,8 +18,7 @@ def node_fact_checker(state: dict) -> dict:
 
     system_prompt = """You are a Medical Fact-Checker for PLAIN LANGUAGE SUMMARIES (PLS).
     
-    Compare the Current Simplified Text against the Original Text, paying SPECIAL ATTENTION to the 'Core Information'. 
-    The Core Information contains the ground-truth facts (Population, Intervention, Comparison, Outcomes) that MUST be preserved.
+    Compare the Current Simplified Text against the Original Text.
 
     Do NOT penalize the draft for translating academic terms into everyday language. For example, translating "no statistically significant difference" to "didn't make a difference" or "was no better than" is EXACTLY what we want. This is NOT a distortion.
     Do NOT demand the inclusion of trial design terms (e.g., "allocation concealment", "blinding", "monopreparations", "risk of bias"). Patients do not need this.
@@ -33,14 +32,13 @@ def node_fact_checker(state: dict) -> dict:
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "Original Text:\n{complex_text}\n\nCore Information (MUST BE PRESERVED):\n{core_information}\n\nCurrent Simplified Text:\n{current_simplified_text}")
+        ("human", "Original Text:\n{complex_text}\n\nCurrent Simplified Text:\n{current_simplified_text}")
     ])
     
     chain = prompt | fact_checker_agent
     
     result = chain.invoke({
         "complex_text": state["complex_text"],
-        "core_information": state["core_information"],
         "current_simplified_text": state["current_simplified_text"]
     })
     

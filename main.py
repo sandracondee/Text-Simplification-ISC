@@ -19,7 +19,8 @@ def main():
     initial_state = {
         "complex_text": sample_complex_text,
         "reference_text": sample_reference_text,
-        "core_information": "",
+        "drafts": {},
+        "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
         "feedback_history": [],
@@ -34,16 +35,27 @@ def main():
         for node_name, updates in output.items():
             final_output_updates = updates
             
-            # ANALYST OUTPUT
-            if node_name == "analyst":
-                core_info = updates.get("core_information", "")
-                print(f"-> Extracted Core Information:\n{core_info}\n")
-                
-            # SIMPLIFIER OUTPUT
-            elif node_name == "simplifier":
-                iter_num = updates.get('iteration_count', 1)
-                draft = updates.get("current_simplified_text", "")
-                print(f"-> Draft Generated (Iteration {iter_num}):\n{draft}\n")
+            # PARALLEL DRAFTERS OUTPUT
+            if node_name == "parallel_drafters":
+                drafts = updates.get("drafts", {})
+                print("-> Drafts generated: A, B, C, D")
+                for letter in ["A", "B", "C", "D"]:
+                    text = drafts.get(letter, "")
+                    preview = text.replace("\n", " ")[:180]
+                    print(f"   {letter}: {preview}{'...' if len(text) > 180 else ''}")
+
+            # JUDGE OUTPUT
+            elif node_name == "judge":
+                selected_letter = updates.get("selected_draft_letter", "")
+                selected_text = updates.get("current_simplified_text", "")
+                print(f"-> Judge selected draft: {selected_letter}")
+                print(f"-> Selected draft text:\n{selected_text}\n")
+
+            # EDITOR OUTPUT
+            elif node_name == "editor":
+                iter_num = updates.get("iteration_count", 0)
+                corrected = updates.get("current_simplified_text", "")
+                print(f"-> Corrected draft (Iteration {iter_num}):\n{corrected}\n")
                 
             # EVALUATORS OUTPUT (Verdict & Feedback)
             elif node_name in ["fact_checker", "readability_evaluator"]:
@@ -66,7 +78,6 @@ def main():
     print("WORKFLOW FINISHED")
     print("==="*25 + "\n")
     
-    # final_state = app.get_state({"configurable": {"thread_id": "1"}}).values
     final_state = updates 
     if not final_state: 
         final_state = final_output_updates
