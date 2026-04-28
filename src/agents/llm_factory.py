@@ -2,22 +2,82 @@ import os
 import importlib
 from typing import Optional
 
+EXTERNAL_PROVIDERS = {"gemini", "groq", "mistral", "deepseek"}
+
 
 def _is_local_mode_enabled() -> bool:
+    """Check if LOCAL_MODE is enabled in environment."""
     return os.getenv("LOCAL_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _resolve_provider() -> str:
+    """Resolve the LLM provider from environment variables.
+    
+    Priority:
+    1. If LOCAL_MODE=1, use 'ollama'
+    2. Otherwise, use LLM_PROVIDER env var (if valid external provider)
+    3. Fallback to default 'gemini'
+    """
+    if _is_local_mode_enabled():
+        return "ollama"
+    
     provider = os.getenv("LLM_PROVIDER", "").strip().lower()
-    if provider:
+    if provider in EXTERNAL_PROVIDERS:
         return provider
-    return "ollama" if _is_local_mode_enabled() else "gemini"
+    return "gemini"
 
 
-def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None):
-    provider = _resolve_provider()
+def _validate_api_key(provider: str, api_key_env: str) -> str:
+    """Validate that an API key is available for a given provider.
+    
+    Args:
+        provider: Provider name (for error messages)
+        api_key_env: Environment variable name to check
+    
+    Returns:
+        The API key value
+    
+    Raises:
+        ValueError: If API key is not set
+    """
+    api_key = os.getenv(api_key_env, "").strip()
+    if not api_key:
+        raise ValueError(
+            f"API key not set for {provider}. Please set {api_key_env} in your .env file."
+        )
+    return api_key
 
-    if provider == "ollama":
+
+def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None, provider: Optional[str] = None):
+    """Build a chat LLM instance based on the configured provider.
+    
+    Supported modes:
+    - LOCAL_MODE=1: Uses Ollama (local)
+    - External: gemini, groq, mistral, deepseek
+    
+    Args:
+        temperature: Model temperature parameter (0.0 - 1.0)
+        model: Optional model name override. If not provided, uses provider-specific defaults.
+        provider: Optional provider override. If not specified, resolves from environment (LOCAL_MODE or LLM_PROVIDER).
+                 If LOCAL_MODE is enabled and an external provider is requested, raises ValueError.
+    
+    Returns:
+        A LangChain chat model instance
+    
+    Raises:
+        ImportError: If required package is not installed
+        ValueError: If provider is not supported, API key is missing, or external provider requested in LOCAL_MODE
+    """
+    resolved_provider = provider or _resolve_provider()
+    
+    # If in LOCAL_MODE, don't allow external providers
+    if _is_local_mode_enabled() and provider and provider != "ollama":
+        raise ValueError(
+            f"Cannot use external provider '{provider}' when LOCAL_MODE is enabled. "
+            "Set LOCAL_MODE to empty/false to use external providers."
+        )
+
+    if resolved_provider == "ollama":
         try:
             chat_ollama_module = importlib.import_module("langchain_ollama")
             ChatOllama = getattr(chat_ollama_module, "ChatOllama")
@@ -39,7 +99,7 @@ def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None):
 
         return ChatOllama(**kwargs)
 
-    if provider == "gemini":
+    if resolved_provider == "gemini":
         try:
             genai_module = importlib.import_module("langchain_google_genai")
             ChatGoogleGenerativeAI = getattr(genai_module, "ChatGoogleGenerativeAI")
@@ -49,9 +109,58 @@ def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None):
                 "Install it with: pip install langchain-google-genai"
             ) from exc
 
+        _validate_api_key("Gemini", "GOOGLE_API_KEY")
         model_name = model or os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
         return ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
 
+    if resolved_provider == "groq":
+        try:
+            groq_module = importlib.import_module("langchain_groq")
+            ChatGroq = getattr(groq_module, "ChatGroq")
+        except ImportError as exc:
+            raise ImportError(
+                "`langchain-groq` is required for Groq mode. "
+                "Install it with: pip install langchain-groq"
+            ) from exc
+
+        _validate_api_key("Groq", "GROQ_API_KEY")
+        model_name = model or os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
+        return ChatGroq(model=model_name, temperature=temperature)
+
+    if resolved_provider == "mistral":
+        try:
+            mistral_module = importlib.import_module("langchain_mistralai")
+            ChatMistralAI = getattr(mistral_module, "ChatMistralAI")
+        except ImportError as exc:
+            raise ImportError(
+                "`langchain-mistralai` is required for Mistral mode. "
+                "Install it with: pip install langchain-mistralai"
+            ) from exc
+
+        _validate_api_key("Mistral", "MISTRAL_API_KEY")
+        model_name = model or os.getenv("MISTRAL_MODEL", "mistral-large-latest")
+        return ChatMistralAI(model=model_name, temperature=temperature)
+
+    if resolved_provider == "deepseek":
+        try:
+            openai_module = importlib.import_module("langchain_openai")
+            ChatOpenAI = getattr(openai_module, "ChatOpenAI")
+        except ImportError as exc:
+            raise ImportError(
+                "`langchain-openai` is required for Deepseek mode. "
+                "Install it with: pip install langchain-openai"
+            ) from exc
+
+        model_name = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        api_key = _validate_api_key("Deepseek", "DEEPSEEK_API_KEY")
+        
+        return ChatOpenAI(
+            model=model_name,
+            temperature=temperature,
+            api_key=api_key,
+            base_url="https://api.deepseek.com/v1",
+        )
+
     raise ValueError(
-        f"Unsupported LLM_PROVIDER='{provider}'. Supported values: 'gemini' or 'ollama'."
+        f"Unsupported LLM_PROVIDER='{resolved_provider}'. Supported external providers: {', '.join(sorted(EXTERNAL_PROVIDERS))}"
     )

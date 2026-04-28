@@ -7,12 +7,12 @@ from src.agents.llm_factory import build_chat_llm
 
 class SimplificationResult(BaseModel):
     current_simplified_text: str = Field(
-        description="The resulting plain language summary, ensuring it is accessible to the widest possible audience "
+        description="The resulting plain language simplification, ensuring it is accessible to the widest possible audience "
         "(e.g., avoiding local idioms, using universally understood terms, and maintaining clear structures)."
     )
 
-def _generate_single_draft(complex_text: str, model_name: str) -> str:
-    llm = build_chat_llm(temperature=0.4, model=model_name)
+def _generate_single_draft(complex_text: str, model_name: str, provider: str) -> str:
+    llm = build_chat_llm(temperature=0.4, model=model_name, provider=provider)
     simplifier_agent = llm.with_structured_output(SimplificationResult)
 
     system_prompt = """You are a medical plain-language writer.
@@ -57,6 +57,29 @@ def _default_drafter_models() -> dict:
         "D": "gemini-1.5-pro",
     }
 
+def _default_drafter_providers() -> dict:
+    """Returns default providers per drafter."""
+    # If LOCAL_MODE is enabled, all drafters use ollama
+    if os.getenv("LOCAL_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return {"A": "ollama", "B": "ollama", "C": "ollama", "D": "ollama"}
+    
+    # Default to gemini for all if not separately configured
+    return {"A": "gemini", "B": "gemini", "C": "gemini", "D": "gemini"}
+
+def _resolve_drafter_providers() -> dict:
+    """Resolve providers for each drafter from environment variables."""
+    defaults = _default_drafter_providers()
+    providers = {}
+    
+    for letter in ["A", "B", "C", "D"]:
+        env_var = f"DRAFTER_PROVIDER_{letter}"
+        provider = os.getenv(env_var, "").strip().lower()
+        if provider:
+            providers[letter] = provider
+        else:
+            providers[letter] = defaults[letter]
+    
+    return providers
 
 def node_parallel_drafters(state: dict) -> dict:
     print("=" * 40)
@@ -65,20 +88,44 @@ def node_parallel_drafters(state: dict) -> dict:
 
     complex_text = state["complex_text"]
 
-    defaults = _default_drafter_models()
-    draft_models = {
-        "A": os.getenv("DRAFTER_MODEL_A", defaults["A"]),
-        "B": os.getenv("DRAFTER_MODEL_B", defaults["B"]),
-        "C": os.getenv("DRAFTER_MODEL_C", defaults["C"]),
-        "D": os.getenv("DRAFTER_MODEL_D", defaults["D"]),
-    }
+    # Resolve providers for each drafter
+    drafter_providers = _resolve_drafter_providers()
+    
+    # Resolve models for each drafter
+    default_models = _default_drafter_models()
+    drafter_models = {}
+    
+    for letter in ["A", "B", "C", "D"]:
+        env_var = f"DRAFTER_MODEL_{letter}"
+        model = os.getenv(env_var, "").strip()
+        if model:
+            drafter_models[letter] = model
+        else:
+            drafter_models[letter] = default_models[letter]
+    
+    # Maintain backward compatibility with SIMPLIFIER_MODELS if set
+    simplifier_models_env = os.getenv("SIMPLIFIER_MODELS", "")
+    if simplifier_models_env:
+        model_names = [name.strip() for name in simplifier_models_env.split(",")]
+        if len(model_names) == 4:
+            drafter_models = {
+                "A": model_names[0],
+                "B": model_names[1],
+                "C": model_names[2],
+                "D": model_names[3],
+            }
 
     drafts: Dict[str, str] = {}
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
-            letter: executor.submit(_generate_single_draft, complex_text, model_name)
-            for letter, model_name in draft_models.items()
+            letter: executor.submit(
+                _generate_single_draft, 
+                complex_text, 
+                drafter_models[letter],
+                drafter_providers[letter]
+            )
+            for letter in ["A", "B", "C", "D"]
         }
 
         for letter, future in futures.items():
@@ -87,7 +134,7 @@ def node_parallel_drafters(state: dict) -> dict:
             except Exception as exc:
                 drafts[letter] = (
                     f"Draft generation failed for {letter}. "
-                    f"Model '{draft_models[letter]}' error: {exc}"
+                    f"Provider '{drafter_providers[letter]}' Model '{drafter_models[letter]}' error: {exc}"
                 )
 
     return {"drafts": drafts}
