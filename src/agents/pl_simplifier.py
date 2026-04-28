@@ -52,9 +52,9 @@ def _default_drafter_models() -> dict:
 
     return {
         "A": "gemini-2.5-flash-lite",
-        "B": "gemini-2.5-flash",
-        "C": "gemini-2.0-flash",
-        "D": "gemini-1.5-pro",
+        "B": "llama-3.3-70b-versatile",
+        "C": "mistral-small-2603",
+        "D": "deepseek-v4-flash",
     }
 
 def _default_drafter_providers() -> dict:
@@ -64,7 +64,7 @@ def _default_drafter_providers() -> dict:
         return {"A": "ollama", "B": "ollama", "C": "ollama", "D": "ollama"}
     
     # Default to gemini for all if not separately configured
-    return {"A": "gemini", "B": "gemini", "C": "gemini", "D": "gemini"}
+    return {"A": "gemini", "B": "groq", "C": "mistral", "D": "deepseek"}
 
 def _resolve_drafter_providers() -> dict:
     """Resolve providers for each drafter from environment variables."""

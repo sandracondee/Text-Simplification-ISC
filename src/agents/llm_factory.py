@@ -158,7 +158,7 @@ def build_chat_llm(temperature: float = 0.0, model: Optional[str] = None, provid
             model=model_name,
             temperature=temperature,
             api_key=api_key,
-            base_url="https://api.deepseek.com/v1",
+            base_url="https://api.deepseek.com",
         )
 
     raise ValueError(
