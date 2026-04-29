@@ -1,3 +1,5 @@
+import os
+
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
@@ -12,7 +14,7 @@ class FactCheckResult(BaseModel):
 
 def node_fact_checker(state: dict) -> dict:
     
-    llm = build_chat_llm(temperature=0.0)
+    llm = build_chat_llm(temperature=0.0, model=os.getenv("FACT_CHECKER_MODEL") or None, provider=os.getenv("FACT_CHECKER_PROVIDER") or None)
     
     fact_checker_agent = llm.with_structured_output(FactCheckResult)
 

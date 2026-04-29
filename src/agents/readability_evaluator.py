@@ -1,3 +1,5 @@
+import os
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
@@ -30,7 +32,7 @@ def node_readability_evaluator(state: dict) -> dict:
             reference_text=state["reference_text"]
         )
     
-    llm = build_chat_llm(temperature=0.3)
+    llm = build_chat_llm(temperature=0.3, model=os.getenv("READABILITY_EVALUATOR_MODEL") or None, provider=os.getenv("READABILITY_EVALUATOR_PROVIDER") or None)
     
     llm_with_tools = llm.bind_tools([calculate_metrics])
     readability_agent = llm_with_tools.with_structured_output(ReadabilityResult)

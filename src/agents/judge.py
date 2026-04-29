@@ -26,7 +26,7 @@ def node_judge(state: dict) -> dict:
     print(" THE JUDGE ")
     print("=" * 40)
 
-    llm = build_chat_llm(temperature=0.1, model=os.getenv("JUDGE_MODEL") or None)
+    llm = build_chat_llm(temperature=0.1, model=os.getenv("JUDGE_MODEL") or None, provider=os.getenv("JUDGE_PROVIDER") or None)
     judge_agent = llm.with_structured_output(JudgeResult)
 
     drafts = state.get("drafts", {})

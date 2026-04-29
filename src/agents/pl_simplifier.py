@@ -12,20 +12,33 @@ class SimplificationResult(BaseModel):
     )
 
 def _generate_single_draft(complex_text: str, model_name: str, provider: str) -> str:
-    llm = build_chat_llm(temperature=0.4, model=model_name, provider=provider)
-    simplifier_agent = llm.with_structured_output(SimplificationResult)
+    llm = build_chat_llm(temperature=0.1, model=model_name, provider=provider)
+    if provider != "deepseek":
+        simplifier_agent = llm.with_structured_output(SimplificationResult)
+        system_prompt = """You are a medical plain-language writer.
+Rewrite the biomedical abstract for the general public.
 
-    system_prompt = """You are a medical plain-language writer.
-    Rewrite the biomedical abstract for the general public.
+Plain Language rules:
+- Keep every numerical and clinical fact faithful to the original.
+- Prefer short sentences and active voice.
+- Explain or rephrase jargon when needed.
+- Avoid academic bureaucracy and heavy statistical wording.
+- Do not add new claims, recommendations, or certainty not present in the source.
+"""
+    else: # Deepseek does not support structured output yet, so we will rely on the system prompt to enforce the output format
+        simplifier_agent = llm
+        system_prompt = """You are a medical plain-language writer.
+Rewrite the biomedical abstract for the general public.
+Plain Language rules:
+- Keep every numerical and clinical fact faithful to the original.
+- Prefer short sentences and active voice.
+- Explain or rephrase jargon when needed.
+- Avoid academic bureaucracy and heavy statistical wording.
+- Do not add new claims, recommendations, or certainty not present in the source.
 
-    Plain Language rules:
-    - Keep every numerical and clinical fact faithful to the original.
-    - Prefer short sentences and active voice.
-    - Explain or rephrase jargon when needed.
-    - Avoid academic bureaucracy and heavy statistical wording.
-    - Do not add new claims, recommendations, or certainty not present in the source.
-    """
-
+IMPORTANT: Return ONLY the simplified text, without any additional commentary or formatting.
+"""
+    
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         ("human", "Original biomedical abstract:\n{complex_text}\n\nWrite one plain-language version.")
@@ -33,7 +46,7 @@ def _generate_single_draft(complex_text: str, model_name: str, provider: str) ->
 
     chain = prompt | simplifier_agent
     result = chain.invoke({"complex_text": complex_text})
-    return result.current_simplified_text
+    return result.current_simplified_text if provider != "deepseek" else result.content.strip()
 
 
 def _resolve_provider() -> str:

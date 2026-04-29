@@ -15,7 +15,7 @@ def node_editor(state: dict) -> dict:
     print(" THE EDITOR ")
     print("=" * 40)
 
-    llm = build_chat_llm(temperature=0.2, model=os.getenv("EDITOR_MODEL") or None)
+    llm = build_chat_llm(temperature=0.2, model=os.getenv("EDITOR_MODEL") or None, provider=os.getenv("EDITOR_PROVIDER") or None)
     editor_agent = llm.with_structured_output(EditorResult)
 
     history = state.get("feedback_history", [])
