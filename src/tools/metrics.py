@@ -1,6 +1,6 @@
 import evaluate
+import textstat
 import numpy as np
-from langchain_core.tools import StructuredTool
 
 class MetricsEvaluator:
 
@@ -50,16 +50,12 @@ class MetricsEvaluator:
         except Exception as e:
             print(f"Error calculating BERTScore: {e}")
 
+        # FKGL
+        fkgl_scores = [textstat.flesch_kincaid_grade(text) for text in predictions]
+
         return {
             "SARI": sari_score['sari'],
             "BLEU": bleu_score['bleu'],
-            "BERTScore_F1": bert_score['f1'][0]
+            "BERTScore_F1": bert_score['f1'][0],
+            "fkgl": np.mean(fkgl_scores)
         }
-    
-evaluator = MetricsEvaluator()
-
-calc_metrics_tool = StructuredTool.from_function(
-    func=evaluator.calc_simplification_metrics,
-    name="calc_simplification_metrics",
-    description="Calculates SARI, BLEU y BERTScore_F1 metrics to evaluate the current simplified text. Receives the original text, the current simplified text given by the Plain Language Simplifier agent and the reference text."
-)

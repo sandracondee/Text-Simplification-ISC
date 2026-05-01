@@ -8,6 +8,7 @@ dependencies = [
     "bert-score>=0.3.13",
     "dotenv>=0.9.9",
     "evaluate>=0.4.6",
+    "mcp>=1.0.0",
     "langchain-core>=1.2.26",
     "langchain-google-genai>=4.2.1",
     "langchain-groq>=0.1.0",
@@ -18,4 +19,7 @@ dependencies = [
     "numpy>=2.4.4",
     "sacrebleu>=2.6.0",
     "sacremoses>=0.1.1",
+    "langchain-mcp-adapters>=0.2.2",
+    "fastmcp>=3.2.4",
+    "textstat>=0.7.13",
 ]
