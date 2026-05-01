@@ -9,7 +9,6 @@ class MCPManager:
                 "transport": "streamable_http"
             }
         }
-
         self._clients_cache = {}
         self._tools_cache = {}
 

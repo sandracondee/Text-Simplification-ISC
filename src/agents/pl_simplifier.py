@@ -11,7 +11,7 @@ class SimplificationResult(BaseModel):
     )
 
 def _generate_single_draft(complex_text: str, model_name: str, provider: str) -> str:
-    llm = build_chat_llm(temperature=0.1, model=model_name, provider=provider)
+    llm = build_chat_llm(temperature=0.4, model=model_name, provider=provider)
     if provider != "deepseek":
         simplifier_agent = llm.with_structured_output(SimplificationResult)
 

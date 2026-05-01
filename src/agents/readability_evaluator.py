@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
 from src.mcp.mcp_manager import mcp_manager
 from langchain.agents import create_agent
+from langchain_core.tools import tool
 
 class ReadabilityResult(BaseModel):
     metrics_report: dict = Field(description="The SARI, BLEU, BERTScore and FKGL values obtained from the tool.")
@@ -14,14 +15,28 @@ async def node_readability_evaluator(state: dict) -> dict:
 
     try:
         mcp_tools = await mcp_manager.get_tools_for_agent(["metrics_server"])
+        mcp_metrics_tool = mcp_tools[0]
+        
+        @tool
+        async def calculate_metrics_for_current_draft() -> dict:
+            """
+            Call this tool to calculate objective metrics: SARI, BLEU, BERTScore and FKGL.
+            You do NOT need to provide the text arguments, the system will inject them automatically.
+            """
 
-        llm = build_chat_llm(temperature=0.3, 
+            return await mcp_metrics_tool.ainvoke({
+                "complex_text": state.get("complex_text", ""),
+                "current_simplified_text": state.get("current_simplified_text", ""),
+                "reference_text": state.get("reference_text", "")
+            })
+
+        llm = build_chat_llm(temperature=0.0, 
                              model=os.getenv("READABILITY_EVALUATOR_MODEL") or None, 
                              provider=os.getenv("READABILITY_EVALUATOR_PROVIDER") or None)
 
         agent = create_agent(
             model=llm, 
-            tools=mcp_tools, 
+            tools=[calculate_metrics_for_current_draft], 
             response_format=ReadabilityResult
         )
         
