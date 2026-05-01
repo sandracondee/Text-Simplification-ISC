@@ -1,19 +1,15 @@
 import asyncio
-from langchain_mcp_adapters.client import MultiServerMCPClient
+from dotenv import load_dotenv
+load_dotenv()
+from src.mcp.mcp_manager import mcp_manager
+
+
 
 async def main():
     print("🔌 Conectando al servidor MCP local...")
-    
-    # Configuramos el cliente apuntando al endpoint SSE de FastMCP
-    client = MultiServerMCPClient({
-        "metrics_server": {
-            "url": "http://127.0.0.1:8020/mcp/",
-            "transport": "streamable_http"
-        }
-    })
-    
+
     try:
-        tools = await client.get_tools()
+        tools = await mcp_manager.get_tools_for_agent(["metrics_server"])
         print(f"Conexión exitosa. Herramientas disponibles: {[t.name for t in tools]}")
         
         calc_tool = next((t for t in tools if t.name == "calculate_metrics"), None)

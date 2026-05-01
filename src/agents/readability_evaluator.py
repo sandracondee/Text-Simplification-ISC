@@ -2,7 +2,7 @@ import os
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
-from langchain_mcp_adapters.client import MultiServerMCPClient
+from src.mcp.mcp_manager import mcp_manager
 from langchain.agents import create_agent
 
 class ReadabilityResult(BaseModel):
@@ -12,15 +12,8 @@ class ReadabilityResult(BaseModel):
 
 async def node_readability_evaluator(state: dict) -> dict:
 
-    client = MultiServerMCPClient({
-        "metrics_server": {
-            "url": "http://127.0.0.1:8020/mcp/",
-            "transport": "streamable_http"
-        }
-    })
-
     try:
-        mcp_tools = await client.get_tools()
+        mcp_tools = await mcp_manager.get_tools_for_agent(["metrics_server"])
 
         llm = build_chat_llm(temperature=0.3, 
                              model=os.getenv("READABILITY_EVALUATOR_MODEL") or None, 
