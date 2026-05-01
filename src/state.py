@@ -13,4 +13,4 @@ class GraphState(TypedDict):
     is_fact_approved: bool
     is_readability_approved: bool
     is_approved: bool
-    glossary_data: Dict[str, str]
+    term_explanations: Dict[str, Dict[str, str]]

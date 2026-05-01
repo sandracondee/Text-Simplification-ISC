@@ -5,6 +5,7 @@ from src.agents.judge import node_judge
 from src.agents.fact_checker import node_fact_checker
 from src.agents.readability_evaluator import node_readability_evaluator
 from src.agents.editor import node_editor
+from src.agents.glossary_builder import node_term_explainer
 
 MAX_ITER = 3
 
@@ -34,7 +35,7 @@ def router_logic(state: GraphState) -> str:
 
     if approved:
         print("-> AUDIT APPROVED. Workflow finished.")
-        return "glossary_builder"
+        return "term_explainer"
 
     if state["iteration_count"] >= MAX_ITER:
         print(f"-> MAX ITERATIONS REACHED ({MAX_ITER}). Workflow finished.")
@@ -55,6 +56,7 @@ def build_graph():
     workflow.add_node("readability_evaluator", node_readability_evaluator)
     workflow.add_node("auditors", node_auditors)
     workflow.add_node("editor", node_editor)
+    workflow.add_node("term_explainer", node_term_explainer)
 
     workflow.add_edge(START, "parallel_drafters")
     workflow.add_edge("parallel_drafters", "judge")
@@ -73,10 +75,10 @@ def build_graph():
         router_logic,
         {
             "editor": "editor",
-            "glossary_builder": "glossary_builder"
+            "term_explainer": "term_explainer",
         }
     )
 
-    workflow.add_edge("glossary_builder", END)
+    workflow.add_edge("term_explainer", END)
 
     return workflow.compile()

@@ -38,15 +38,18 @@ def lookup_medical_term(term: str) -> str:
 
     # Exact match
     if term_lower in medical_dict:
-        return medical_dict[term_lower]
+        return f"Found as '{term_lower}': {medical_dict[term_lower]}"
 
     # Fuzzy match 80% similarity
     possible_matches = difflib.get_close_matches(term_lower, medical_dict.keys(), n=1, cutoff=0.8)
-    
     if possible_matches:
         best_match = possible_matches[0]
-        explanation = medical_dict[best_match]
-        return f"Found as '{best_match}': {explanation}"
+        return f"Found as '{best_match}': {medical_dict[best_match]}"
+    
+    # Substring match (if the term is part of a longer dictionary term)
+    for dict_term in medical_dict.keys():
+        if len(dict_term) > 4 and dict_term in term_lower:
+            return f"Found as '{dict_term}': {medical_dict[dict_term]}"
 
     return "Term not found in the dictionary."
 
