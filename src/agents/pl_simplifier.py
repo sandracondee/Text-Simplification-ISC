@@ -7,41 +7,27 @@ from src.agents.llm_factory import build_chat_llm
 
 class SimplificationResult(BaseModel):
     current_simplified_text: str = Field(
-        description="The resulting plain language simplification, ensuring it is accessible to the widest possible audience "
-        "(e.g., avoiding local idioms, using universally understood terms, and maintaining clear structures)."
+        description="The Plain Language simplification, ensuring it is accessible for a general audience."
     )
 
 def _generate_single_draft(complex_text: str, model_name: str, provider: str) -> str:
     llm = build_chat_llm(temperature=0.1, model=model_name, provider=provider)
     if provider != "deepseek":
         simplifier_agent = llm.with_structured_output(SimplificationResult)
-        system_prompt = """You are a medical plain-language writer.
-Rewrite the biomedical abstract for the general public.
 
-Plain Language rules:
-- Keep every numerical and clinical fact faithful to the original.
-- Prefer short sentences and active voice.
-- Explain or rephrase jargon when needed.
-- Avoid academic bureaucracy and heavy statistical wording.
-- Do not add new claims, recommendations, or certainty not present in the source.
-"""
     else: # Deepseek does not support structured output yet, so we will rely on the system prompt to enforce the output format
         simplifier_agent = llm
-        system_prompt = """You are a medical plain-language writer.
-Rewrite the biomedical abstract for the general public.
-Plain Language rules:
-- Keep every numerical and clinical fact faithful to the original.
-- Prefer short sentences and active voice.
-- Explain or rephrase jargon when needed.
-- Avoid academic bureaucracy and heavy statistical wording.
-- Do not add new claims, recommendations, or certainty not present in the source.
 
-IMPORTANT: Return ONLY the simplified text, without any additional commentary or formatting.
-"""
+    system_prompt = ("You are an expert medical writer specialized in adapting biomedical abstracts into Plain Language for lay readers.\n"
+                    "Your task is to simplify the following text for a general audience.\n"
+                    "Keep the core medical facts intact, but replace or explain complex medical jargon using everyday language.\n"
+                    "Ensure that all numbers, results, and facts remain exactly the same.\n"
+                    "Do not paraphrase numerical data or alter the meaning of findings.\n"
+                    "IMPORTANT: Do not add an extra title, just answer with the simplified text.")    
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "Original biomedical abstract:\n{complex_text}\n\nWrite one plain-language version.")
+        ("human", "Simplify the following biomedical abstract: {complex_text}")
     ])
 
     chain = prompt | simplifier_agent

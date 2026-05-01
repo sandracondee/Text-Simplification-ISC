@@ -3,23 +3,11 @@ import os
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
-
+from typing import Literal
 
 class JudgeResult(BaseModel):
-    rationale: str = Field(description="Short rationale for the selected draft.")
-    winner: str = Field(description="Winning option letter: A, B, C, or D.")
-
-
-def _normalize_winner(raw_winner: str) -> str:
-    cleaned = (raw_winner or "").strip().upper()
-    if cleaned in {"A", "B", "C", "D"}:
-        return cleaned
-
-    match = re.search(r"\b([ABCD])\b", cleaned)
-    if match:
-        return match.group(1)
-    return "A"
-
+    rationale: str = Field(description="Step-by-step analysis and short rationale evaluating the 4 options based on style and readability.")
+    winner: Literal["A", "B", "C", "D"] = Field(description="The single letter of the winning option.")
 
 def node_judge(state: dict) -> dict:
     print("=" * 40)
@@ -31,31 +19,43 @@ def node_judge(state: dict) -> dict:
 
     drafts = state.get("drafts", {})
 
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """You are a Plain Language Style Judge.
-Evaluate options A, B, C, and D against the original biomedical text.
-Prioritize plain language quality, clarity, and structure.
-Do NOT evaluate numerical accuracy.
-You must provide a winner letter among A/B/C/D.
-At the very end of your internal decision this format must be respected: WINNER: [Letter].""",
-        ),
-        (
-            "human",
-            "Original biomedical text:\n{complex_text}\n\n"
-            "Option A:\n{draft_a}\n\n"
-            "Option B:\n{draft_b}\n\n"
-            "Option C:\n{draft_c}\n\n"
-            "Option D:\n{draft_d}\n\n"
-            "Select the winner and provide the winner letter.",
-        ),
+    system_prompt_judge = (
+        "You are an expert Style Judge specialized in Medical Plain Language. "
+        "Your task is to evaluate 4 simplified versions (Option A, B, C and D) of a complex biomedical abstract and select the best one.\n\n"
+        "EVALUATION CRITERIA (Focus ONLY on style and readability):\n"
+        "1. Jargon & Vocabulary: Which option best avoids or explains complex medical terms using everyday language?\n"
+        "2. Structure & Flow: Which option uses shorter sentences, active voice and clear formatting to make it easy to digest?\n"
+        "3. Natural Tone: Which option sounds the most natural and accessible for a patient without any medical training?\n\n"
+        "CRITICAL INSTRUCTIONS:\n"
+        "- DO NOT attempt to fact-check the clinical data. Another specialized agent will verify the facts. Assume all options contain the correct data.\n"
+        "- Think step-by-step. Briefly analyze the strengths and weaknesses of each option regarding style."
+    )
+
+    human_prompt_judge = (
+        "Please evaluate the following 4 options and select the winner based on Plain Language style:\n\n"
+        "---\n"
+        "OPTION A:\n"
+        "{draft_A}\n\n"
+        "---\n"
+        "OPTION B:\n"
+        "{draft_B}\n\n"
+        "---\n"
+        "OPTION C:\n"
+        "{draft_C}\n\n"
+        "---\n"
+        "OPTION D:\n"
+        "{draft_D}\n\n"
+        "Evaluate the options and return the rationale and the winning letter."
+    )
+
+    prompt_judge = ChatPromptTemplate.from_messages([
+        ("system", system_prompt_judge),
+        ("human", human_prompt_judge)
     ])
 
-    chain = prompt | judge_agent
+    chain = prompt_judge | judge_agent
     result = chain.invoke(
         {
-            "complex_text": state["complex_text"],
             "draft_a": drafts.get("A", ""),
             "draft_b": drafts.get("B", ""),
             "draft_c": drafts.get("C", ""),
@@ -63,10 +63,14 @@ At the very end of your internal decision this format must be respected: WINNER:
         }
     )
 
-    winner = _normalize_winner(result.winner)
-    selected_text = drafts.get(winner, drafts.get("A", ""))
+    # Y ahora tienes acceso directo a los atributos del objeto Pydantic
+    winner_letter = result.winner # Devuelve directamente "A", "B", "C" o "D"
+    rationale = result.rationale # El texto donde el modelo "pensó"
+
+    state["selected_draft_letter"] = winner_letter
+    state["current_simplified_text"] = drafts[winner_letter]
 
     return {
-        "selected_draft_letter": winner,
-        "current_simplified_text": selected_text,
+        "selected_draft_letter": winner_letter,
+        "current_simplified_text": state["current_simplified_text"],
     }
