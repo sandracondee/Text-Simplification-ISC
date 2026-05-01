@@ -5,12 +5,9 @@ from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
 
 class FactCheckResult(BaseModel):
-    is_accurate: bool = Field(
-        description="True if the current simplified text is accurate according to the original complex text and preserves all core information. False if there are hallucinations or omissions."
-    )
-    feedback: str = Field(
-        description="Specific instructions for the Simplifier Agent on what facts to correct or what core information is missing. Empty string if accurate."
-    )
+    analysis: str = Field(description="Step-by-step comparison of all numerical data, clinical findings, and core facts between the original and the simplified text.")
+    is_fact_approved: bool = Field(description="True if all facts and numbers are 100% accurate and present. False if there are any omissions, hallucinations, or altered numbers.")
+    feedback: str = Field(description="If is_fact_approved is False, detail the specific errors found (e.g., 'Original says 42%, simplified says 24%'). If True, leave empty.")
 
 def node_fact_checker(state: dict) -> dict:
     
@@ -18,26 +15,35 @@ def node_fact_checker(state: dict) -> dict:
     
     fact_checker_agent = llm.with_structured_output(FactCheckResult)
 
-    system_prompt = """You are a Medical Fact-Checker for PLAIN LANGUAGE SUMMARIES (PLS).
-    
-    Compare the Current Simplified Text against the Original Text.
+    system_prompt_fact_checker = (
+        "You are a strict and meticulous Medical Fact-checker. "
+        "Your sole responsibility is to compare a Simplified Medical Text against its Original Complex Abstract to ensure 100% clinical and numerical accuracy.\n\n"
+        "EVALUATION RULES:\n"
+        "1. Numerical Accuracy: Every percentage, p-value, dosage, patient count, or confidence interval present in the simplified text MUST match the original exactly.\n"
+        "2. No Omissions of Core Findings: The simplified version must include the main clinical outcomes and conclusions from the original text.\n"
+        "3. No Hallucinations: The simplified text must not introduce new facts, claims or data that are not present in the original abstract.\n"
+        "4. Ignore Style: Do NOT evaluate readability, tone, jargon or formatting. You only care about factual and mathematical truth.\n\n"
+        "INSTRUCTIONS:\n"
+        "Analyze the texts step-by-step. If you find ANY factual or numerical discrepancy, set 'is_fact_approved' to False and detail the exact mismatch in the 'feedback'. "
+        "If everything is perfectly accurate, set 'is_fact_approved' to True."
+    )
 
-    Do NOT penalize the draft for translating academic terms into everyday language. For example, translating "no statistically significant difference" to "didn't make a difference" or "was no better than" is EXACTLY what we want. This is NOT a distortion.
-    Do NOT demand the inclusion of trial design terms (e.g., "allocation concealment", "blinding", "monopreparations", "risk of bias"). Patients do not need this.
+    human_prompt_fact_checker = (
+        "Please fact-check the following simplified text.\n\n"
+        "ORIGINAL ABSTRACT:\n"
+        "{complex_text}\n\n"
+        "---\n"
+        "SIMPLIFIED TEXT TO VERIFY:\n"
+        "{current_simplified_text}\n\n"
+        "Perform the fact-check and return the structured result."
+    )
 
-    Look for:
-    1. Omissions: Did the draft leave out any crucial data from the Core Information?
-    2. Hallucinations: Did the draft invent data or facts not present in the original text?
-    3. Distortion: Are the results or statistical findings exaggerated or minimized?
-
-    If the medical truth is preserved in simple words, APPROVE IT. Only reject if they hallucinate a completely fake benefit or omit a deadly side effect. If you decide to reject it provide actionable feedback."""
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "Original Text:\n{complex_text}\n\nCurrent Simplified Text:\n{current_simplified_text}")
+    prompt_fact_checker = ChatPromptTemplate.from_messages([
+        ("system", system_prompt_fact_checker),
+        ("human", human_prompt_fact_checker)
     ])
     
-    chain = prompt | fact_checker_agent
+    chain = prompt_fact_checker | fact_checker_agent
     
     result = chain.invoke({
         "complex_text": state["complex_text"],
@@ -45,10 +51,10 @@ def node_fact_checker(state: dict) -> dict:
     })
     
     feedback_to_append = []
-    if not result.is_accurate:
+    if not result.is_fact_approved:
         feedback_to_append.append(f"[FACT-CHECKER FEEDBACK]: {result.feedback}")
     
     return {
-        "is_fact_approved": result.is_accurate, 
+        "is_fact_approved": result.is_fact_approved, 
         "feedback_history": feedback_to_append
     }

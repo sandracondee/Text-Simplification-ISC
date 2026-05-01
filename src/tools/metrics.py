@@ -9,7 +9,7 @@ class MetricsEvaluator:
         self.sari_metric = evaluate.load("sari")
         self.bleu_metric = evaluate.load("bleu")
         self.bertscore_metric = evaluate.load("bertscore")
-        print("Evluation metrics loaded.")
+        print("Evaluation metrics loaded.")
 
     def calc_simplification_metrics(self, complex_text: str, current_simplified_text: str, reference_text: str) -> dict:
         """

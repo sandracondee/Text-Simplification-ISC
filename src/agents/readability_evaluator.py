@@ -1,24 +1,14 @@
 import os
-import asyncio
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from langchain_core.tools import tool
 from src.agents.llm_factory import build_chat_llm
-from src.tools.metrics import evaluator
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langgraph.prebuilt import create_react_agent
 from langchain.agents import create_agent
 
 class ReadabilityResult(BaseModel):
-    is_readable: bool = Field(
-        description="True if metrics are acceptable and no unexplained jargon is found. False otherwise."
-    )
-    readability_feedback: str = Field(
-        description="Specific instructions for the Simplifier Agent on what terms to explain or sentences to simplify. Empty string if everithing is perfect."
-    )
-    metrics_report: dict = Field(
-        description="The SARI, BLEU, and BERTScore values obtained from the tool."
-    )
+    metrics_report: dict = Field(description="The SARI, BLEU, BERTScore and FKGL values obtained from the tool.")
+    is_readability_approved: bool = Field(description="True if the text meets the readability standards for a general audience and metrics are acceptable. False otherwise.")
+    feedback: str = Field(description="If is_readability_approved is False, provide specific instructions to fix it (e.g., 'Make sentences shorter in paragraph 2'). If True, leave empty.")
 
 async def node_readability_evaluator(state: dict) -> dict:
 
@@ -36,62 +26,57 @@ async def node_readability_evaluator(state: dict) -> dict:
                              model=os.getenv("READABILITY_EVALUATOR_MODEL") or None, 
                              provider=os.getenv("READABILITY_EVALUATOR_PROVIDER") or None)
 
-        agent = create_react_agent(
+        agent = create_agent(
             model=llm, 
             tools=mcp_tools, 
-            response_format=ReadabilityResult # Requiere LangGraph actualizado
+            response_format=ReadabilityResult
         )
-        system_prompt = """You are an expert NLP Quality Evaluator and your goal is to ensure a medical text is accessible to general audience.
-                You MUST use the `calculate_metrics` tool first to get SARI, BLEU, and BERTScore_F1.
-                
-                EVALUATION CRITERIA:
-                1. SARI & BERTScore: SARI can be naturally lower (15-25 is normal) because clinical terms cannot be deleted. Check if BERTScore > 0.2 to ensure no medical facts were altered.
-                2. Contextual Vocabulary (CRITICAL TOLERANCE): The target audience are not children. 
-                - YOU MUST ALLOW common disease names, standard trial terms (e.g., "placebo", "morbidity"), and specific metrics IF they are briefly contextualized (e.g., "HbA1c, a measurement of glucose control").
-                - DO NOT reject a simplification just because it contains these words.
-                - You should ONLY penalize bureaucratic academic phrasing (e.g., "allocation concealment") or overly complex statistical jargon (e.g., "95% CI 0.57 to 0.86") if left unsimplified.
+        
+        system_prompt_readability = (
+            "You are an expert Readability Evaluator for Medical Plain Language. "
+            "Your task is to assess whether a simplified medical text is accessible and easy to understand for the general public without medical training.\n\n"
+            "INSTRUCTIONS:\n"
+            "1. Tool Usage: You MUST use the readability tools provided to you to calculate objective metrics: SARI, BLEU, BERTScore, and FKGL.\n"
+            "2. SARI IS THE ONLY METRIC THAT MATTERS: The ONLY quantitative threshold you must enforce is SARI. If the SARI score is lower than 35, you MUST fail the text automatically.\n"
+            "3. Qualitative Assessment: Regardless of the SARI score, read the text yourself. Is it genuinely understandable for a layperson? Does it sound natural? If it is confusing, highly academic, or robotic, you must fail it.\n"
+            "4. Verdict: Based ONLY on the SARI threshold (>35) and your qualitative assessment, decide if the text passes. If it fails, set 'is_readability_approved' to False and write clear, actionable instructions in 'feedback' (e.g., 'SARI is below 35, simplify vocabulary', or 'Text sounds too academic, use everyday language').\n"
+            "5. Do NOT evaluate the clinical accuracy or factual correctness of the text."
+        )
 
-                DECISION RULES:
-                - APPROVE (is_readable=True) IF: The text resembles a standard medical summary. It flows naturally, explains highly obscure jargon, but rightly retains necessary clinical terminology and disease names. 
-                - REJECT (is_readable=False) IF: The text is basically a copy of the academic abstract, retaining dense statistical brackets, bureaucratic study design jargon without explanation, or if the metrics drop indicating a loss of facts.
-                
-                FEEDBACK INSTRUCTIONS:
-                If you reject the draft, your feedback must be specific and actionable.
-                You MUST list the exact words, acronyms or sentences that caused the rejection."""
-                
-        # 4. Modificamos el prompt del usuario para inyectar las 3 variables 
-        # que el modelo necesita obligatoriamente para usar la herramienta MCP
-        user_prompt = f"""
-        Current simplified text: {state["current_simplified_text"]}
+        human_prompt_readability = (
+            "Evaluate the readability of the following simplified text:\n\n"
+            "---\n"
+            "SIMPLIFIED TEXT:\n"
+            "{current_simplified_text}\n\n"
+            "---\n"
+            "First, use your tools to analyze the text. Then, return the final evaluation using the structured format."
+        )
         
-        DATA REQUIRED FOR YOUR TOOL:
-        To use the `calculate_metrics` tool properly, you must use these exact references:
-        - complex_text: {state["complex_text"]}
-        - current_simplified_text: {state["current_simplified_text"]}
-        - reference_text: {state["reference_text"]}
-        """
-        
-        # 5. Invocamos el agente
+        prompt_readability = ChatPromptTemplate.from_messages([
+            ("system", system_prompt_readability),
+            ("human", human_prompt_readability)
+        ])
+
+        messages = prompt_readability.format_messages(
+            current_simplified_text=state["current_simplified_text"]
+        )
+
         response = await agent.ainvoke({
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
+            "messages": messages
         })
         
-        # En LangGraph, cuando usas response_format, el objeto final tipado 
-        # se guarda en la clave "structured_response" de la salida del agente.
         result: ReadabilityResult = response["structured_response"]
         
         feedback_to_append = []
-        if not result.is_readable:
-            feedback_to_append.append(f"[READABILITY EVALUATOR FEEDBACK]: {result.readability_feedback}")
+        if not result.is_readability_approved:
+            feedback_to_append.append(f"[READABILITY EVALUATOR FEEDBACK]: {result.feedback}")
 
         return {
-            "is_readability_approved": result.is_readable, 
+            "is_readability_approved": result.is_readability_approved, 
             "feedback_history": feedback_to_append,
             "current_metrics": result.metrics_report
         }
+    
     except Exception as e:
         print(f"Error in readability evaluator: {e}")
         return {
