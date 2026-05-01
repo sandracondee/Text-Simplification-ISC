@@ -1,10 +1,11 @@
+import asyncio
 import os
 from dotenv import load_dotenv
 from src.graph.workflow import build_graph
 
 load_dotenv()
 
-def main():
+async def main():
     print("==="*25)
     print("Initializing Simplification Multi-Agent System")
     print("==="*25 + "\n")
@@ -31,7 +32,7 @@ def main():
     }
     
     final_output_updates = {}
-    for output in app.stream(initial_state):
+    async for output in app.astream(initial_state):
         for node_name, updates in output.items():
             final_output_updates = updates
             
@@ -94,6 +95,16 @@ def main():
     else:
         print("- No metrics were reported.")
 
+    print("\n[ EXPLANATIONS FOR KEY TERMS ]")
+    term_explanations = final_state.get("term_explanations", {})
+    if term_explanations:
+        for term, explanations in term_explanations.items():
+            print(f"\n- {term}:")
+            for role, explanation in explanations.items():
+                print(f"  {role}: {explanation}")
+    else:
+        print("- No term explanations were provided.")
+
     if not final_state.get("is_approved"):
         print("\n⚠️ WARNING: The system reached the maximum iteration limit (3) without achieving full approval from the evaluators. Human review is recommended.")
     else:
@@ -109,4 +120,4 @@ if __name__ == "__main__":
             "GOOGLE_API_KEY is missing. Add it to your .env file or use LOCAL_MODE=1/LLM_PROVIDER=ollama for local execution."
         )
         
-    main()
+    asyncio.run(main())

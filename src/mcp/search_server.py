@@ -5,7 +5,7 @@ from fastmcp import FastMCP
 medical_dict = {}
 
 try:
-    with open("data/medical_dictionary.json", "r", encoding="utf-8") as f:
+    with open("pl_medical_dictionary/pl_medical_dictionary.json", "r", encoding="utf-8") as f:
         raw_data = json.load(f)
         definitions_list = raw_data.get("definitions", [])
         

@@ -5,7 +5,7 @@ from src.agents.judge import node_judge
 from src.agents.fact_checker import node_fact_checker
 from src.agents.readability_evaluator import node_readability_evaluator
 from src.agents.editor import node_editor
-from src.agents.glossary_builder import node_term_explainer
+from src.agents.term_explainer import node_term_explainer
 
 MAX_ITER = 3
 
@@ -39,7 +39,7 @@ def router_logic(state: GraphState) -> str:
 
     if state["iteration_count"] >= MAX_ITER:
         print(f"-> MAX ITERATIONS REACHED ({MAX_ITER}). Workflow finished.")
-        return END
+        return "term_explainer"
 
     print("-> AUDIT REJECTED. Routing to editor for correction.")
     return "editor"

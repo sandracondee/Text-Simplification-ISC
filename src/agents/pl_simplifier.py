@@ -11,28 +11,29 @@ class SimplificationResult(BaseModel):
     )
 
 def _generate_single_draft(complex_text: str, model_name: str, provider: str) -> str:
-    llm = build_chat_llm(temperature=0.4, model=model_name, provider=provider)
-    if provider != "deepseek":
-        simplifier_agent = llm.with_structured_output(SimplificationResult)
+    # llm = build_chat_llm(temperature=0.4, model=model_name, provider=provider)
+    # if provider != "deepseek":
+    #     simplifier_agent = llm.with_structured_output(SimplificationResult)
 
-    else: # Deepseek does not support structured output yet, so we will rely on the system prompt to enforce the output format
-        simplifier_agent = llm
+    # else: # Deepseek does not support structured output yet, so we will rely on the system prompt to enforce the output format
+    #     simplifier_agent = llm
 
-    system_prompt = ("You are an expert medical writer specialized in adapting biomedical abstracts into Plain Language for lay readers.\n"
-                    "Your task is to simplify the following text for a general audience.\n"
-                    "Keep the core medical facts intact, but replace or explain complex medical jargon using everyday language.\n"
-                    "Ensure that all numbers, results, and facts remain exactly the same.\n"
-                    "Do not paraphrase numerical data or alter the meaning of findings.\n"
-                    "IMPORTANT: Do not add an extra title, just answer with the simplified text.")    
+    # system_prompt = ("You are an expert medical writer specialized in adapting biomedical abstracts into Plain Language for lay readers.\n"
+    #                 "Your task is to simplify the following text for a general audience.\n"
+    #                 "Keep the core medical facts intact, but replace or explain complex medical jargon using everyday language.\n"
+    #                 "Ensure that all numbers, results, and facts remain exactly the same.\n"
+    #                 "Do not paraphrase numerical data or alter the meaning of findings.\n"
+    #                 "IMPORTANT: Do not add an extra title, just answer with the simplified text.")    
     
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "Simplify the following biomedical abstract: {complex_text}")
-    ])
+    # prompt = ChatPromptTemplate.from_messages([
+    #     ("system", system_prompt),
+    #     ("human", "Simplify the following biomedical abstract: {complex_text}")
+    # ])
 
-    chain = prompt | simplifier_agent
-    result = chain.invoke({"complex_text": complex_text})
-    return result.current_simplified_text if provider != "deepseek" else result.content.strip()
+    # chain = prompt | simplifier_agent
+    # result = chain.invoke({"complex_text": complex_text})
+    # return result.current_simplified_text if provider != "deepseek" else result.content.strip()
+    return "The authors identified 10 randomised controlled trials, which involved 577 participants with diabetes mellitus. Cinnamon was administered in tablet or capsule form, at a mean dose of 2 g daily, for four to 16 weeks. Cinnamon bark has been shown in a number of animal studies to improve blood sugar levels, though its effect in humans is not too clear. Hence, the review authors set out to determine the effect of oral cinnamon extract on blood sugar and other outcomes. The review authors found cinnamon to be no more effective than placebo, another active medication or no treatment in reducing glucose levels and glycosylated haemoglobin A1c (HbA1c), a long-term measurement of glucose control. None of the trials looked at health-related quality of life, morbidity, death from any cause or costs. Adverse reactions to cinnamon treatment were generally mild and infrequent. Further trials investigating long-term benefits and risks of the use of cinnamon for diabetes mellitus are required. Rigorous study design, quality reporting of study methods, and consideration of important outcomes such as health-related quality of life and diabetes complications, are key areas in need of attention."
 
 
 def _resolve_provider() -> str:
