@@ -7,6 +7,10 @@ class MCPManager:
             "metrics_server": {
                 "url": os.getenv("MCP_METRICS_SERVER_URL"),
                 "transport": "streamable_http"
+            },
+            "search_server": {
+                "url": os.getenv("MCP_SEARCH_SERVER_URL"),
+                "transport": "streamable_http"
             }
         }
         self._clients_cache = {}

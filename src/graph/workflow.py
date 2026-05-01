@@ -34,7 +34,7 @@ def router_logic(state: GraphState) -> str:
 
     if approved:
         print("-> AUDIT APPROVED. Workflow finished.")
-        return END
+        return "glossary_builder"
 
     if state["iteration_count"] >= MAX_ITER:
         print(f"-> MAX ITERATIONS REACHED ({MAX_ITER}). Workflow finished.")
@@ -73,8 +73,10 @@ def build_graph():
         router_logic,
         {
             "editor": "editor",
-            END: END
+            "glossary_builder": "glossary_builder"
         }
     )
+
+    workflow.add_edge("glossary_builder", END)
 
     return workflow.compile()

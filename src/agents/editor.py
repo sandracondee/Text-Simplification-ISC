@@ -5,7 +5,7 @@ from src.agents.llm_factory import build_chat_llm
 
 
 class EditorResult(BaseModel):
-    corrected_text: str = Field(description="The final corrected version of the simplified text. It must be a plain string with no introductory or concluding remarks.")
+    corrected_text: str = Field(description="The final corrected version of the simplified text.")
 
 
 def node_editor(state: dict) -> dict:
@@ -34,7 +34,7 @@ def node_editor(state: dict) -> dict:
         "{current_simplified_text}\n\n"
         "--- AUDIT FEEDBACK ---\n"
         "{feedback_history}\n\n"
-        "Return only the corrected text."
+        "Return only the corrected text. Do NOT include any explanations or justifications, only the final edited version."
     )
 
     prompt_editor = ChatPromptTemplate.from_messages([
