@@ -66,6 +66,8 @@ def node_fact_checker(state: dict) -> dict:
     pause_step_sync()
     
     return {
+        "fact_checker_rationale": result.analysis,
+        "fact_checker_feedback": result.feedback,
         "is_fact_approved": result.is_fact_approved, 
         "feedback_history": feedback_to_append
     }

@@ -5,6 +5,10 @@ class GraphState(TypedDict):
     complex_text: str
     reference_text: str
     drafts: Dict[str, str]
+    judge_rationale: str
+    fact_checker_rationale: str
+    fact_checker_feedback: str
+    readability_evaluator_feedback: str
     selected_draft_letter: str
     current_simplified_text: str
     current_metrics: dict

@@ -83,7 +83,7 @@ async def node_readability_evaluator(state: dict) -> dict:
                     "FKGL": 8.2
                 },
                 is_readability_approved=True,
-                feedback=""
+                feedback="Hola estoy probando el evaluador de legibilidad"
             )
         } # --- MOCK PARA TESTING ---
         
@@ -96,6 +96,7 @@ async def node_readability_evaluator(state: dict) -> dict:
         await pause_step_async()
 
         return {
+            "readability_evaluator_feedback": result.feedback,
             "is_readability_approved": result.is_readability_approved, 
             "feedback_history": feedback_to_append,
             "current_metrics": result.metrics_report
@@ -105,6 +106,7 @@ async def node_readability_evaluator(state: dict) -> dict:
         print(f"Error in readability evaluator: {e}")
         await pause_step_async()
         return {
+            "readability_evaluator_feedback": f"Error during evaluation: {str(e)}",
             "is_readability_approved": False, 
             "feedback_history": [],
             "current_metrics": {}

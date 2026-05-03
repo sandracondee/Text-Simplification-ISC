@@ -70,17 +70,18 @@ def node_judge(state: dict) -> dict:
         winner="A"
     )
 
-
     # Y ahora tienes acceso directo a los atributos del objeto Pydantic
     winner_letter = result.winner # Devuelve directamente "A", "B", "C" o "D"
     rationale = result.rationale # El texto donde el modelo "pensó"
 
+    state["judge_rationale"] = rationale
     state["selected_draft_letter"] = winner_letter
     state["current_simplified_text"] = drafts[winner_letter]
 
     pause_step_sync()
 
     return {
+        "judge_rationale": rationale,
         "selected_draft_letter": winner_letter,
         "current_simplified_text": state["current_simplified_text"],
     }

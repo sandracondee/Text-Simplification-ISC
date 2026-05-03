@@ -407,10 +407,10 @@ def render_text_panel(title: str, content_html: str, original: bool = False) -> 
     )
 
 
-
-def render_stream_card(title: str, body: str, node_id: str = "default") -> str:
+def render_stream_card(title: str, body: str, node_id: str = "default", escape_body: bool = True) -> str:
     css_class = f"stream-card card-{node_id.replace('_', '-')}"
-    formatted_body = html.escape(body).replace('\n', '<br>')
+    # Solo escapamos si se lo pedimos, si no, respetamos el HTML que le pasemos
+    formatted_body = html.escape(body).replace('\n', '<br>') if escape_body else body
     return (
         f"<div class='{css_class}'>"
         f"<h4>{html.escape(title)}</h4>"
@@ -449,25 +449,55 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
     if node_name == "judge":
         selected_letter = updates.get("selected_draft_letter", "")
         selected_text = updates.get("current_simplified_text", "")
-        preview = selected_text.replace("\n", " ")
-        
-        body = f"🏆 Selected Winner: Draft {selected_letter or 'N/A'}\n\n📄 Preview:\n\"{preview or 'No text returned.'}\""
-        return render_stream_card("⚖️ Judge", body, node_name)
+        rationale = updates.get("judge_rationale", "")
+
+        safe_rationale = html.escape(rationale).replace('\n', '<br>')
+        safe_preview = html.escape(selected_text).replace('\n', '<br>')
+
+        body = (
+            f"<details style='margin-bottom: 1rem; cursor: pointer;'>"
+            f"  <summary style='font-weight: 600; outline: none;'>💭 Rationale</summary>"
+            f"  <div style='margin-top: 0.5rem; padding: 0.8rem; background-color: rgba(0,0,0,0.05); border-radius: 0.4rem; font-size: 0.95em;'>"
+            f"      {safe_rationale}"
+            f"  </div>"
+            f"</details>"
+            f"🏆 <strong>Selected Winner: Draft {selected_letter or 'N/A'}</strong><br><br>"
+            f"\"{safe_preview or 'No text returned.'}\""
+        )
+        return render_stream_card("⚖️ Judge", body, node_name, escape_body=False)
 
     if node_name == "fact_checker":
         approved = updates.get("is_fact_approved", False)
         status_icon = "✅ PASS" if approved else "❌ FAIL"
-        feedback = final_state.get("feedback_history", [])
-        latest_feedback = feedback[-1] if feedback else "No factual issues detected."
+        feedback = updates.get("fact_checker_feedback", "") if approved else None
         
-        body = f"Verdict: {status_icon}\n\n💬 Feedback:\n{latest_feedback}"
-        return render_stream_card("🔎 Fact Checker", body, node_name)
+        rationale = updates.get("fact_checker_rationale", "")
+        safe_rationale = html.escape(rationale).replace('\n', '<br>')
+
+        body = (
+            f"<details style='margin-bottom: 0.5rem; cursor: pointer;'>"
+            f"  <summary style='font-weight: 600; outline: none;'>💬 Rationale</summary>"
+            f"  <div style='margin-top: 0.5rem; padding: 0.8rem; background-color: rgba(0,0,0,0.05); border-radius: 0.4rem; font-size: 0.95em;'>"
+            f"      {safe_rationale}"
+            f"  </div>"
+            f"</details>"
+            f"<strong>Verdict: {status_icon}</strong>"
+        )
+
+        if feedback:
+            safe_feedback = html.escape(feedback).replace('\n', '<br>')
+            body += (
+                f"\n\n📢 Feedback: {safe_feedback}"
+            )
+        return render_stream_card("🔎 Fact Checker", body, node_name, escape_body=False)
 
     if node_name == "readability_evaluator":
         approved = updates.get("is_readability_approved", False)
         status_icon = "✅ PASS" if approved else "❌ FAIL"
         metrics = updates.get("current_metrics", {})
+        feedback = updates.get("readability_evaluator_feedback", "") if approved else None
         
+
         # Formateamos las métricas como una lista punteada
         lines = []
         for metric, value in metrics.items():
@@ -478,6 +508,9 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         metrics_text = "\n".join(lines) or "  No metrics reported."
         
         body = f"Verdict: {status_icon}\n\n📊 Metrics Details:\n{metrics_text}"
+        if feedback:
+            safe_feedback = html.escape(feedback).replace('\n', '<br>')
+            body += f"\n\n📢 Feedback: {safe_feedback}"
         return render_stream_card("📏 Readability Evaluator", body, node_name)
 
     if node_name == "editor":
@@ -516,7 +549,7 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         
         # Ajustamos el mensaje a la lógica real del grafo
         if is_approved:
-            final_icon = "🎉 APPROVED (Proceeding to Term Explainer)"
+            final_icon = "🎉 APPROVED - Sending the approved version to Term Explainer"
         elif iteration_count >= 3:
             final_icon = "⚠️ REJECTED - ⏭️ MAX ITERATIONS REACHED. Sending last simplified version to Term Explainer."
         else:
