@@ -78,63 +78,101 @@ CUSTOM_CSS = """
         color: #EDEDE9 !important;             /* Texto clarito (casi blanco) */
     }
 
-    .stream-card {
-        border-left: 4px solid var(--primary-color, #0b6efd);
-        border-radius: 0.6rem;
-        padding: 0.85rem 1rem;
-        margin-bottom: 0.65rem;
-        border: 1px solid rgba(128, 128, 128, 0.16);
-        background: #ADAF7E;
-        color: #31333F;
-        border-left-width: 8px;
-        border-left-style: solid;
+    /* --- DISEÑO DE TIMELINE (Línea de tiempo del proceso) --- */
+    .timeline-wrapper {
+        position: relative;
+        padding-left: 45px;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
     }
 
+    /* La línea vertical que une a los agentes */
+    .timeline-wrapper::before {
+        content: '';
+        position: absolute;
+        left: 18px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background-color: #ADAF7E; /* Tu color verde base */
+        border-radius: 2px;
+        opacity: 0.6;
+    }
+
+    .stream-card {
+        position: relative;
+        background-color: #EDEDE9; /* <-- Tu nuevo color de fondo */
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 0.6rem;
+        border: 1px solid rgba(173, 175, 126, 0.4); 
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04); 
+        color: #454632; /* Forzamos texto oscuro para contraste perfecto */
+    }
+
+    /* El círculo flotante en la línea de tiempo */
+    .stream-card::before {
+        content: '';
+        position: absolute;
+        left: -33px; /* Centrado matemáticamente sobre la línea */
+        top: 1.3rem;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: white;
+        border: 4px solid #ADAF7E;
+        z-index: 1;
+    }
+
+    /* Títulos convertidos en etiquetas (Badges) */
     .stream-card h4 {
-        margin: 0 0 0.25rem 0;
-        font-size: 1rem;
+        display: inline-block;
+        margin: 0 0 0.6rem 0;
+        padding: 0.35rem 0.85rem;
+        border-radius: 2rem; /* Bordes redondeados estilo pastilla */
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: white;
+        letter-spacing: 0.5px;
     }
 
     .stream-card p {
-        margin: 0.2rem 0 0 0;
+        margin: 0;
         white-space: pre-wrap;
+        line-height: 1.6;
+        font-size: 0.95rem;
     }
 
-    /* --- COLORES ESPECÍFICOS POR AGENTE --- */
-    .card-parallel-drafters { 
-        background-color: #5B9ECF80; 
-        border-left-color: #5B9ECF; 
-    }
-    .card-fact-checker { 
-        background-color: #C8AA1080; 
-        border-left-color: #C8AA10; 
-    }
-    .card-judge { 
-        background-color: #7F67A180; 
-        border-left-color: #7F67A1; 
-    }
-    .card-readability-evaluator { 
-        background-color: #BF870E80; 
-        border-left-color: #BF870E; 
-    }
-    .card-term-explainer { 
-        background-color: #70965D80; 
-        border-left-color: #70965D; 
-    }
-    .card-editor { 
-        background-color: #A9452B80; 
-        border-left-color: #A9452B; 
-    }
+    /* --- COLORES VIBRANTES POR AGENTE --- */
+    
+    /* Parallel drafters */
+    .card-parallel-drafters::before { border-color: #5B9ECF; }
+    .card-parallel-drafters h4 { background-color: #5B9ECF; color: #EDEDE9; }
 
-    /* Para los auditores y nodos no mapeados */
-    .card-auditors { 
-        background-color: #4A556880; 
-        border-left-color: #4A5568; 
-    } 
-    .card-default { 
-        background-color: #71809680; 
-        border-left-color: #718096; 
-    }
+    /* Fact checker */
+    .card-fact-checker::before { border-color: #C8AA10; }
+    .card-fact-checker h4 { background-color: #C8AA10; color: #EDEDE9; } /* Texto oscuro para mejor contraste */
+
+    /* Judge */
+    .card-judge::before { border-color: #7F67A1; }
+    .card-judge h4 { background-color: #7F67A1; color: #EDEDE9; }
+
+    /* Readability evaluator */
+    .card-readability-evaluator::before { border-color: #BF870E; }
+    .card-readability-evaluator h4 { background-color: #BF870E; color: #EDEDE9; }
+
+    /* Term explainer */
+    .card-term-explainer::before { border-color: #70965D; }
+    .card-term-explainer h4 { background-color: #70965D; color: #EDEDE9; }
+
+    /* Editor */
+    .card-editor::before { border-color: #A9452B; }
+    .card-editor h4 { background-color: #A9452B; color: #EDEDE9; }
+    
+    /* Auditor Aggregator / Default */
+    .card-auditors::before { border-color: #4A5568; }
+    .card-auditors h4 { background-color: #4A5568; color: #EDEDE9; }
 
 
     .tooltip {
@@ -291,7 +329,7 @@ def load_examples() -> list[Dict[str, str]]:
 
 def humanize_node_name(node_name: str) -> str:
     labels = {
-        "parallel_drafters": "Drafting Panel",
+        "parallel_drafters": "Parallel Simplifiers",
         "judge": "Judge",
         "fact_checker": "Fact Checker",
         "readability_evaluator": "Readability Evaluator",
@@ -396,7 +434,7 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
                 preview += "..."
             draft_lines.append(f"{letter}: {preview or 'No draft returned.'}")
         body = "Drafts generated.\n" + "\n".join(draft_lines)
-        return render_stream_card("Drafting Panel", body, node_name)
+        return render_stream_card("✍️ Parallel Simplifiers", body, node_name)
 
     if node_name == "judge":
         selected_letter = updates.get("selected_draft_letter", "")
@@ -405,23 +443,23 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         if selected_text and len(selected_text) > 260:
             preview += "..."
         body = f"Selected draft: {selected_letter or 'N/A'}\nPreview: {preview or 'No text returned.'}"
-        return render_stream_card("Judge", body, node_name)
+        return render_stream_card("⚖️ Judge", body, node_name)
 
     if node_name == "fact_checker":
         approved = updates.get("is_fact_approved", False)
         feedback = final_state.get("feedback_history", [])
         latest_feedback = feedback[-1] if feedback else "No factual issues detected."
         body = f"Verdict: {'Approved' if approved else 'Rejected'}\n{latest_feedback}"
-        return render_stream_card("Fact Checker", body, node_name)
+        return render_stream_card("🔎 Fact Checker", body, node_name)
 
     if node_name == "readability_evaluator":
         approved = updates.get("is_readability_approved", False)
         metrics = updates.get("current_metrics", {})
         body = (
             f"Verdict: {'Approved' if approved else 'Rejected'}\n"
-            f"Metrics:\n{format_metrics(metrics)}" # Asumo que format_metrics está definida en otra parte
+            f"Metrics:\n{format_metrics(metrics)}" 
         )
-        return render_stream_card("Readability Evaluator", body, node_name)
+        return render_stream_card("📏 Readability Evaluator", body, node_name)
 
     if node_name == "editor":
         iteration_count = updates.get("iteration_count", final_state.get("iteration_count", 0))
@@ -430,19 +468,19 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         if corrected_text and len(corrected_text) > 260:
             preview += "..."
         body = f"Iteration: {iteration_count}\nCorrected text preview: {preview or 'No text returned.'}"
-        return render_stream_card("Editor", body, node_name)
+        return render_stream_card("✏️ Editor", body, node_name)
 
     if node_name == "term_explainer":
         term_explanations = updates.get("term_explanations", {})
         terms = ", ".join(sorted(term_explanations.keys())) or "No terms found."
         body = f"Explanations prepared for {len(term_explanations)} term(s).\n{terms}"
-        return render_stream_card("Term Explainer", body, node_name)
+        return render_stream_card("📚 Term Explainer", body, node_name)
 
     if node_name == "auditors":
         fact_ok = final_state.get("is_fact_approved", False)
         read_ok = final_state.get("is_readability_approved", False)
         body = f"Fact Checker: {fact_ok}\nReadability Evaluator: {read_ok}\nApproved: {fact_ok and read_ok}"
-        return render_stream_card("Auditor Aggregator", body, node_name)
+        return render_stream_card("📋 Auditor Aggregator", body, node_name)
 
     return render_stream_card(humanize_node_name(node_name), str(updates), node_name)
 
@@ -546,14 +584,9 @@ def main() -> None:
 
         st.divider()
 
-        # Display agents' reasoning process
-        with st.expander("Agents' reasoning process", expanded=True):
-            st.markdown(
-                "<div class='muted-note'>The workflow execution has completed. Below is a summary of the agents' decisions.</div>",
-                unsafe_allow_html=True,
-            )
-            # Recreate the execution flow display from the final state
-            _display_execution_summary(st.session_state.final_state)
+        # Display agents' reasoning process (sin desplegable ni texto extra)
+        st.markdown("<div class='section-title'>Agents' reasoning process</div>", unsafe_allow_html=True)
+        _display_execution_summary(st.session_state.final_state)
 
     else:
         # Initial screen: input form
@@ -665,15 +698,15 @@ def main() -> None:
 def _display_execution_summary(final_state: Dict[str, Any]) -> None:
     """Display a summary of the workflow execution."""
     
-    # Display execution log if available
     execution_log = final_state.get("_execution_log", [])
     if execution_log:
-        st.markdown("**Step-by-step agent execution:**")
-        for idx, log_entry in enumerate(execution_log, 1):
-            node_name = log_entry["node"]
-            html_card = log_entry["html"]
-            with st.expander(f"Step {idx}: {humanize_node_name(node_name)}", expanded=False):
-                st.markdown(html_card, unsafe_allow_html=True)
+        # Envolvemos todas las tarjetas en nuestro contenedor de timeline
+        html_content = "<div class='timeline-wrapper'>"
+        for log_entry in execution_log:
+            html_content += log_entry["html"]
+        html_content += "</div>"
+        
+        st.markdown(html_content, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
