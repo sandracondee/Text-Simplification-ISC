@@ -23,4 +23,6 @@ dependencies = [
     "fastmcp>=3.2.4",
     "textstat>=0.7.13",
     "langchain>=1.2.17",
+    "streamlit>=1.41.0",
+    "torchvision>=0.18.0",
 ]
