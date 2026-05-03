@@ -601,7 +601,7 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
 
 def main() -> None:
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-    st.markdown("# Medical Plain Language Simplifier")
+    st.markdown("# ⚕️ Medical Plain Language Simplifier")
 
     # Initialize session state
     if "final_state" not in st.session_state:
