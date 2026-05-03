@@ -3,6 +3,7 @@ import os
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
+from src.agents.step_delay import pause_step_sync
 
 class FactCheckResult(BaseModel):
     analysis: str = Field(description="Step-by-step comparison of all numerical data, clinical findings, and core facts between the original and the simplified text.")
@@ -61,6 +62,8 @@ def node_fact_checker(state: dict) -> dict:
 
     if not result.is_fact_approved:
         feedback_to_append.append(f"[FACT-CHECKER FEEDBACK]: {result.feedback}")
+
+    pause_step_sync()
     
     return {
         "is_fact_approved": result.is_fact_approved, 

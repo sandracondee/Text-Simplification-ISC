@@ -3,6 +3,7 @@ import os
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
+from src.agents.step_delay import pause_step_sync
 from typing import Literal
 
 class JudgeResult(BaseModel):
@@ -76,6 +77,8 @@ def node_judge(state: dict) -> dict:
 
     state["selected_draft_letter"] = winner_letter
     state["current_simplified_text"] = drafts[winner_letter]
+
+    pause_step_sync()
 
     return {
         "selected_draft_letter": winner_letter,

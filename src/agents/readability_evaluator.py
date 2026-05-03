@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
 from src.mcp.mcp_manager import mcp_manager
+from src.agents.step_delay import pause_step_async
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 
@@ -92,6 +93,8 @@ async def node_readability_evaluator(state: dict) -> dict:
         if not result.is_readability_approved:
             feedback_to_append.append(f"[READABILITY EVALUATOR FEEDBACK]: {result.feedback}")
 
+        await pause_step_async()
+
         return {
             "is_readability_approved": result.is_readability_approved, 
             "feedback_history": feedback_to_append,
@@ -100,6 +103,7 @@ async def node_readability_evaluator(state: dict) -> dict:
     
     except Exception as e:
         print(f"Error in readability evaluator: {e}")
+        await pause_step_async()
         return {
             "is_readability_approved": False, 
             "feedback_history": [],

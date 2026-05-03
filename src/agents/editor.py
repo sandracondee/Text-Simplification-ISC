@@ -2,6 +2,7 @@ import os
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
+from src.agents.step_delay import pause_step_sync
 
 
 class EditorResult(BaseModel):
@@ -53,6 +54,8 @@ def node_editor(state: dict) -> dict:
     result = EditorResult(
         corrected_text="Este es el texto médico simplificado corregido. Se ha generado un mock directo sin llamar a ningún LLM para agilizar el desarrollo y las pruebas."
     )
+
+    pause_step_sync()
 
     return {
         "current_simplified_text": result.corrected_text,

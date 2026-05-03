@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from src.agents.llm_factory import build_chat_llm
 from src.mcp.mcp_manager import mcp_manager
+from src.agents.step_delay import pause_step_async
 
 class Explanation(BaseModel):
     searched_term: str = Field(description="The exact word or phrase extracted from the simplified text.")
@@ -74,10 +75,13 @@ async def node_term_explainer(state: dict) -> dict:
                 "explanation": item.explanation
             }
 
+        await pause_step_async()
+
         return {
             "term_explanations": term_explanations_dict
         }
         
     except Exception as e:
         print(f"Error in term explainer: {e}")
+        await pause_step_async()
         return state

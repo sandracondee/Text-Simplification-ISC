@@ -6,6 +6,7 @@ from src.agents.fact_checker import node_fact_checker
 from src.agents.readability_evaluator import node_readability_evaluator
 from src.agents.editor import node_editor
 from src.agents.term_explainer import node_term_explainer
+from src.agents.step_delay import pause_step_sync
 
 MAX_ITER = 3
 
@@ -15,6 +16,8 @@ def node_auditors(state: GraphState) -> dict:
     """
     fact_ok = state.get("is_fact_approved", False)
     read_ok = state.get("is_readability_approved", False)
+
+    pause_step_sync()
 
     return {
         "is_approved": fact_ok and read_ok

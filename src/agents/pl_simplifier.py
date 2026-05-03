@@ -4,6 +4,7 @@ from typing import Dict
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from src.agents.llm_factory import build_chat_llm
+from src.agents.step_delay import pause_step_sync
 
 class SimplificationResult(BaseModel):
     current_simplified_text: str = Field(
@@ -137,4 +138,5 @@ def node_parallel_drafters(state: dict) -> dict:
                     f"Provider '{drafter_providers[letter]}' Model '{drafter_models[letter]}' error: {exc}"
                 )
 
+    pause_step_sync()
     return {"drafts": drafts}
