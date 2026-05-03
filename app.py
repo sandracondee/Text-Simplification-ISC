@@ -1,9 +1,11 @@
 import asyncio
 import html
 import re
+import os
 from typing import Any, Dict
 
 import streamlit as st
+import pandas as pd
 from dotenv import load_dotenv
 
 from src.workflow import build_graph
@@ -20,8 +22,21 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
+    .block-container {
+        padding-top: 0.5rem !important; /* Puedes bajarlo a 1rem o incluso 0rem si lo quieres pegado del todo */
+        padding-bottom: 3rem !important; /* Aprovechamos para reducir también el espacio del fondo */
+    }
     .app-shell {
-        padding-top: 0.5rem;
+        padding-top: 0rem;
+        padding-bottom: 0rem;
+    }
+
+    main {
+        padding-top: 0rem !important;
+    }
+
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] > [data-testid="stMarkdown"]:first-child {
+        margin-top: -1rem;
     }
 
     .section-title {
@@ -224,6 +239,21 @@ CUSTOM_CSS = """
         opacity: 0.72;
         font-size: 0.95rem;
     }
+
+    /* Transformar los botones secundarios en tarjetas de texto (para los ejemplos) */
+    button[data-testid="baseButton-secondary"] {
+        min-height: 240px; /* Altura mínima de la tarjeta */
+        height: 100%;      /* Para que todos midan lo mismo en la misma fila */
+        align-items: flex-start; /* Empuja el texto hacia arriba */
+        padding: 1.2rem;
+    }
+
+    button[data-testid="baseButton-secondary"] p {
+        white-space: pre-wrap; /* Permite que el texto baje de línea */
+        text-align: left;      /* Alinea a la izquierda para mejor lectura */
+        line-height: 1.5;
+        font-size: 0.95rem;    /* Hace la fuente un pelín más pequeña si hace falta */
+    }
 </style>
 """
 
@@ -237,6 +267,26 @@ DEFAULT_REFERENCE_TEXT = """The authors identified 10 randomised controlled tria
 def get_graph():
     """Build the compiled LangGraph once per Streamlit session."""
     return build_graph()
+
+
+@st.cache_data
+def load_examples() -> list[Dict[str, str]]:
+    """Load examples from the CSV file."""
+    try:
+        csv_path = os.path.join(os.path.dirname(__file__), "data", "cochraneauto_docs_test.csv")
+        df = pd.read_csv(csv_path)
+        examples = []
+        for idx, row in df.iterrows():
+            examples.append({
+                "id": idx,
+                "pair_id": row.get("pair_id", f"Example {idx+1}"),
+                "complex": row["complex"],
+                "simple": row["simple"]
+            })
+        return examples
+    except Exception as e:
+        st.warning(f"Could not load examples: {e}")
+        return []
 
 
 def humanize_node_name(node_name: str) -> str:
@@ -464,9 +514,12 @@ def main() -> None:
     if "show_results" not in st.session_state:
         st.session_state.show_results = False
 
+    if "carousel_index" not in st.session_state:
+        st.session_state.carousel_index = 0
+
     # Reset to initial screen
     if st.session_state.show_results:
-        if st.button("Simplify another medical abstract"):
+        if st.button("Simplify another medical abstract", type="primary"):
             st.session_state.show_results = False
             st.session_state.final_state = None
             st.rerun()
@@ -513,8 +566,71 @@ def main() -> None:
             )
             
             submitted = st.form_submit_button("Simplify")
+        
+        examples_placeholder = st.empty()
 
+        # 2. METEMOS TODOS LOS EJEMPLOS DENTRO DE LA CAJA
+        with examples_placeholder.container():
+            st.markdown("### Example Texts")
+            st.markdown("Navigate through examples and select one to try:")
+            
+            examples = load_examples()
+            if examples:
+                examples_per_view = 3  # Show 3 examples at a time
+                total_examples = len(examples)
+                max_index = max(0, total_examples - examples_per_view)
+                
+                # Display carousel items
+                carousel_items = examples[st.session_state.carousel_index:st.session_state.carousel_index + examples_per_view]
+                cols = st.columns(len(carousel_items))
+                
+                for col_idx, example in enumerate(carousel_items):
+                    with cols[col_idx]:
+                        with st.container(border=True):
+                            # Título
+                            st.markdown(f"<div style='font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;'> Abstract: {html.escape(example['pair_id'])}</div>", unsafe_allow_html=True)
+                            
+                            # Texto con scroll
+                            st.markdown(
+                                f"<div style='height: 200px; overflow-y: auto; font-size: 1rem; "
+                                f"margin-bottom: 20px; padding-right: 8px; line-height: 1.6; color: #31333F;'>"
+                                f"{html.escape(example['complex'])}"
+                                f"</div>",
+                                unsafe_allow_html=True
+                            )
+                            
+                            # Botón centrado
+                            c1, c2, c3 = st.columns([1, 1.5, 1])
+                            with c2:
+                                if st.button("Use this example", key=f"example_{example['id']}", use_container_width=True):
+                                    st.session_state.input_text = example["complex"]
+                                    st.session_state.show_results = False
+                                    st.rerun()
+                
+                # Navigation row 
+                nav_col1, spacer1, nav_col2, spacer2, nav_col3 = st.columns([0.75, 1.5, 4, 1.5, 0.75], vertical_alignment="center")
+                
+                with nav_col1:
+                    if st.button("◀ Previous", key="prev_examples", use_container_width=True):
+                        st.session_state.carousel_index = (st.session_state.carousel_index - 1) % (max_index + 1)
+                        st.rerun()
+                
+                with nav_col2:
+                    current_start = st.session_state.carousel_index + 1
+                    current_end = min(st.session_state.carousel_index + examples_per_view, total_examples)
+                    st.markdown(
+                        f"<p style='text-align: center; color: #888; margin-top: 0.4rem;'>Showing {current_start}-{current_end} of {total_examples}</p>",
+                        unsafe_allow_html=True
+                    )
+                    
+                with nav_col3:
+                    if st.button("Next ▶", key="next_examples", use_container_width=True):
+                        st.session_state.carousel_index = (st.session_state.carousel_index + 1) % (max_index + 1)
+                        st.rerun()
+            else:
+                st.info("No examples available from the dataset.")
         if submitted:
+            examples_placeholder.empty()
             user_text_stripped = user_text.strip()
             if not user_text_stripped:
                 st.error("Please enter some text before running the simplifier.")
