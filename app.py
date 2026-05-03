@@ -32,33 +32,87 @@ CUSTOM_CSS = """
     }
 
     .text-panel {
-        border: 1px solid rgba(128, 128, 128, 0.25);
+        border: 3px solid rgba(0, 0, 0, 0.75);
         border-radius: 0.8rem;
         padding: 1rem;
         line-height: 1.65;
         min-height: 100px;
         word-wrap: break-word;
+        background: #ADAF7E;
+        color: #31333F;
     }
 
-    /* Light mode text panel */
-    @media (prefers-color-scheme: light) {
-        .text-panel {
-            background: #f5f5f5;
-            color: #212529;
-        }
+    .stButton > button {
+        background-color: #ADAF7E; /* Tu color secundario */
+        color: #31333F;             /* Color del texto */
+        border: 2px solid rgba(0, 0, 0, 1);  /* Borde negro de 2px */
     }
 
-    /* Dark mode text panel */
-    @media (prefers-color-scheme: dark) {
-        .text-panel {
-            background: #2c2f33;
-            color: #e0e0e0;
-        }
+    .stFormSubmitButton > button {
+        background-color: #ADAF7E; /* Tu color secundario */
+        color: #31333F;             /* Color del texto */
+        border: 2px solid rgba(0, 0, 0, 1);  /* Borde negro de 2px */
     }
 
-    .text-panel.is-original {
-        opacity: 0.98;
+    .stream-card {
+        border-left: 4px solid var(--primary-color, #0b6efd);
+        border-radius: 0.6rem;
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.65rem;
+        border: 1px solid rgba(128, 128, 128, 0.16);
+        background: #ADAF7E;
+        color: #31333F;
+        border-left-width: 8px;
+        border-left-style: solid;
     }
+
+    .stream-card h4 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+    }
+
+    .stream-card p {
+        margin: 0.2rem 0 0 0;
+        white-space: pre-wrap;
+    }
+
+    /* --- COLORES ESPECÍFICOS POR AGENTE --- */
+    .card-parallel-drafters { 
+        background-color: #5B9ECF80; 
+        border-left-color: #5B9ECF; 
+    }
+    .card-fact-checker { 
+        background-color: #C8AA1080; 
+        border-left-color: #C8AA10; 
+    }
+    .card-judge { 
+        background-color: #7F67A180; 
+        border-left-color: #7F67A1; 
+    }
+    .card-readability-evaluator { 
+        background-color: #BF870E80; 
+        border-left-color: #BF870E; 
+    }
+    .card-term-explainer { 
+        background-color: #70965D80; 
+        border-left-color: #70965D; 
+    }
+    .card-editor { 
+        background-color: #A9452B80; 
+        border-left-color: #A9452B; 
+    }
+
+    /* Para los auditores y nodos no mapeados */
+    .card-auditors { 
+        background-color: #4A556880; 
+        border-left-color: #4A5568; 
+    } 
+    .card-default { 
+        background-color: #71809680; 
+        border-left-color: #718096; 
+    }
+
+    
 
     .tooltip {
         position: relative;
@@ -143,40 +197,6 @@ CUSTOM_CSS = """
     .tooltip:hover .tooltiptext {
         visibility: visible;
         opacity: 1;
-    }
-
-    .stream-card {
-        border-left: 4px solid var(--primary-color, #0b6efd);
-        border-radius: 0.6rem;
-        padding: 0.85rem 1rem;
-        margin-bottom: 0.65rem;
-        border: 1px solid rgba(128, 128, 128, 0.16);
-    }
-
-    /* Light mode stream card */
-    @media (prefers-color-scheme: light) {
-        .stream-card {
-            background: #f5f5f5;
-            color: #212529;
-        }
-    }
-
-    /* Dark mode stream card */
-    @media (prefers-color-scheme: dark) {
-        .stream-card {
-            background: #2c2f33;
-            color: #e0e0e0;
-        }
-    }
-
-    .stream-card h4 {
-        margin: 0 0 0.25rem 0;
-        font-size: 1rem;
-    }
-
-    .stream-card p {
-        margin: 0.2rem 0 0 0;
-        white-space: pre-wrap;
     }
 
     .muted-note {
@@ -269,11 +289,14 @@ def render_text_panel(title: str, content_html: str, original: bool = False) -> 
     )
 
 
-def render_stream_card(title: str, body: str) -> str:
+
+def render_stream_card(title: str, body: str, node_id: str = "default") -> str:
+    css_class = f"stream-card card-{node_id.replace('_', '-')}"
+    formatted_body = html.escape(body).replace('\n', '<br>')
     return (
-        "<div class='stream-card'>"
+        f"<div class='{css_class}'>"
         f"<h4>{html.escape(title)}</h4>"
-        f"<p>{html.escape(body)}</p>"
+        f"<p>{formatted_body}</p>"
         "</div>"
     )
 
@@ -302,7 +325,7 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
                 preview += "..."
             draft_lines.append(f"{letter}: {preview or 'No draft returned.'}")
         body = "Drafts generated.\n" + "\n".join(draft_lines)
-        return render_stream_card("Drafting Panel", body)
+        return render_stream_card("Drafting Panel", body, node_name)
 
     if node_name == "judge":
         selected_letter = updates.get("selected_draft_letter", "")
@@ -311,23 +334,23 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         if selected_text and len(selected_text) > 260:
             preview += "..."
         body = f"Selected draft: {selected_letter or 'N/A'}\nPreview: {preview or 'No text returned.'}"
-        return render_stream_card("Judge", body)
+        return render_stream_card("Judge", body, node_name)
 
     if node_name == "fact_checker":
         approved = updates.get("is_fact_approved", False)
         feedback = final_state.get("feedback_history", [])
         latest_feedback = feedback[-1] if feedback else "No factual issues detected."
         body = f"Verdict: {'Approved' if approved else 'Rejected'}\n{latest_feedback}"
-        return render_stream_card("Fact Checker", body)
+        return render_stream_card("Fact Checker", body, node_name)
 
     if node_name == "readability_evaluator":
         approved = updates.get("is_readability_approved", False)
         metrics = updates.get("current_metrics", {})
         body = (
             f"Verdict: {'Approved' if approved else 'Rejected'}\n"
-            f"Metrics:\n{format_metrics(metrics)}"
+            f"Metrics:\n{format_metrics(metrics)}" # Asumo que format_metrics está definida en otra parte
         )
-        return render_stream_card("Readability Evaluator", body)
+        return render_stream_card("Readability Evaluator", body, node_name)
 
     if node_name == "editor":
         iteration_count = updates.get("iteration_count", final_state.get("iteration_count", 0))
@@ -336,21 +359,21 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         if corrected_text and len(corrected_text) > 260:
             preview += "..."
         body = f"Iteration: {iteration_count}\nCorrected text preview: {preview or 'No text returned.'}"
-        return render_stream_card("Editor", body)
+        return render_stream_card("Editor", body, node_name)
 
     if node_name == "term_explainer":
         term_explanations = updates.get("term_explanations", {})
         terms = ", ".join(sorted(term_explanations.keys())) or "No terms found."
         body = f"Explanations prepared for {len(term_explanations)} term(s).\n{terms}"
-        return render_stream_card("Term Explainer", body)
+        return render_stream_card("Term Explainer", body, node_name)
 
     if node_name == "auditors":
         fact_ok = final_state.get("is_fact_approved", False)
         read_ok = final_state.get("is_readability_approved", False)
         body = f"Fact Checker: {fact_ok}\nReadability Evaluator: {read_ok}\nApproved: {fact_ok and read_ok}"
-        return render_stream_card("Auditor Aggregator", body)
+        return render_stream_card("Auditor Aggregator", body, node_name)
 
-    return render_stream_card(humanize_node_name(node_name), str(updates))
+    return render_stream_card(humanize_node_name(node_name), str(updates), node_name)
 
 
 async def run_graph_execution(app, complex_text: str, reference_text: str) -> Dict[str, Any]:
