@@ -82,7 +82,7 @@ async def node_readability_evaluator(state: dict) -> dict:
                     "BERTScore": 0.85,
                     "FKGL": 8.2
                 },
-                is_readability_approved=False,
+                is_readability_approved=True,
                 feedback=""
             )
         } # --- MOCK PARA TESTING ---

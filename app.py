@@ -4,6 +4,9 @@ import re
 import os
 from typing import Any, Dict
 
+import base64
+import streamlit.components.v1 as components
+
 import streamlit as st
 import pandas as pd
 from dotenv import load_dotenv
@@ -18,6 +21,12 @@ st.set_page_config(
     page_icon="🩺",
     layout="wide",
 )
+
+def get_local_img_as_base64(file_path: str) -> str:
+    """Lee un archivo de imagen local y lo convierte a Base64."""
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
 
 CUSTOM_CSS = """
@@ -467,10 +476,8 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
     stream_entries = []
     execution_log = []
 
-    hood_status = st.empty()
     hood_log = st.empty()
 
-    hood_status.info("Starting LangGraph execution...")
     hood_log.markdown(
         "<div class='muted-note'>Live node updates will appear here as the workflow runs.</div>",
         unsafe_allow_html=True,
@@ -490,9 +497,6 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
             execution_log.append({"node": node_name, "updates": updates, "html": card_html})
             
             hood_log.markdown("".join(stream_entries), unsafe_allow_html=True)
-            hood_status.info(f"Latest node finished: {humanize_node_name(node_name)}")
-
-    hood_status.success("LangGraph execution completed.")
     
     # Store execution log in final state for later display
     final_state["_execution_log"] = execution_log
@@ -640,11 +644,50 @@ def main() -> None:
 
             try:
                 graph = get_graph()
+                loading_placeholder = st.empty()
+                
+                # 1. Cargamos tu robot.png local
+                img_path = os.path.join(os.path.dirname(__file__), "robot.png")
+                try:
+                    img_base64 = get_local_img_as_base64(img_path)
+                    img_src = f"data:image/png;base64,{img_base64}"
+                except Exception:
+                    img_src = "" 
 
-                # Show placeholder for results
-                st.info("Processing your text... Please wait while the agents work.")
+                # 2. Usamos componentes de Streamlit para renderizar el loader
+                with loading_placeholder.container():
+                    components.html(
+                        f"""
+                        <style>
+                            .container {{
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                height: 100%;
+                                font-family: 'Source Sans Pro', sans-serif;
+                            }}
+                            .text {{
+                                margin-top: 12px;
+                                font-weight: 600;
+                                color: #454632;
+                                font-size: 1rem;
+                            }}
+                        </style>
+                        <div class="container">
+                            <script type="module" src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/trio.js"></script>
+                            
+                            <l-trio size="55" speed="1.3" color="#454632"></l-trio>
+                            
+                            <img src="{img_src}" style="width: 70px; height: auto; margin-top: 15px;">
+                            
+                            <div class="text">Simplifying medical abstract ...</div>
+                        </div>
+                        """,
+                        height=250, # Reducido ligeramente para evitar espacios vacíos
+                    )
 
-                # Run the graph and collect execution trace
+                # 3. Ejecución del grafo
                 final_state = asyncio.run(
                     run_graph_execution(
                         graph,
@@ -653,6 +696,8 @@ def main() -> None:
                     )
                 )
 
+                # 4. Limpieza
+                loading_placeholder.empty()
                 st.session_state.final_state = final_state
                 st.session_state.show_results = True
                 st.rerun()
