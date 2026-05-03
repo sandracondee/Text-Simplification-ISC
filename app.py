@@ -429,57 +429,91 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         draft_lines = []
         for letter in ["A", "B", "C", "D"]:
             draft_text = drafts.get(letter, "")
-            preview = draft_text.replace("\n", " ")[:180]
-            if draft_text and len(draft_text) > 180:
-                preview += "..."
-            draft_lines.append(f"{letter}: {preview or 'No draft returned.'}")
-        body = "Drafts generated.\n" + "\n".join(draft_lines)
+            # Acortamos un poco la previsualización para que no ocupe toda la pantalla
+            preview = draft_text.replace("\n", " ")
+            
+            draft_lines.append(f"🔹 Draft {letter}:\n\"{preview or 'No draft returned.'}\"")
+        
+        body = "✨ Generated 4 independent simplifications:\n\n" + "\n\n".join(draft_lines)
         return render_stream_card("✍️ Parallel Simplifiers", body, node_name)
 
     if node_name == "judge":
         selected_letter = updates.get("selected_draft_letter", "")
         selected_text = updates.get("current_simplified_text", "")
-        preview = selected_text.replace("\n", " ")[:260]
-        if selected_text and len(selected_text) > 260:
-            preview += "..."
-        body = f"Selected draft: {selected_letter or 'N/A'}\nPreview: {preview or 'No text returned.'}"
+        preview = selected_text.replace("\n", " ")
+        
+        body = f"🏆 Selected Winner: Draft {selected_letter or 'N/A'}\n\n📄 Preview:\n\"{preview or 'No text returned.'}\""
         return render_stream_card("⚖️ Judge", body, node_name)
 
     if node_name == "fact_checker":
         approved = updates.get("is_fact_approved", False)
+        status_icon = "✅ PASS" if approved else "❌ FAIL"
         feedback = final_state.get("feedback_history", [])
         latest_feedback = feedback[-1] if feedback else "No factual issues detected."
-        body = f"Verdict: {'Approved' if approved else 'Rejected'}\n{latest_feedback}"
+        
+        body = f"Verdict: {status_icon}\n\n💬 Feedback:\n{latest_feedback}"
         return render_stream_card("🔎 Fact Checker", body, node_name)
 
     if node_name == "readability_evaluator":
         approved = updates.get("is_readability_approved", False)
+        status_icon = "✅ PASS" if approved else "❌ FAIL"
         metrics = updates.get("current_metrics", {})
-        body = (
-            f"Verdict: {'Approved' if approved else 'Rejected'}\n"
-            f"Metrics:\n{format_metrics(metrics)}" 
-        )
+        
+        # Formateamos las métricas como una lista punteada
+        lines = []
+        for metric, value in metrics.items():
+            if isinstance(value, float):
+                lines.append(f"  ▪️ {metric}: {value:.2f}")
+            else:
+                lines.append(f"  ▪️ {metric}: {value}")
+        metrics_text = "\n".join(lines) or "  No metrics reported."
+        
+        body = f"Verdict: {status_icon}\n\n📊 Metrics Details:\n{metrics_text}"
         return render_stream_card("📏 Readability Evaluator", body, node_name)
 
     if node_name == "editor":
-        iteration_count = updates.get("iteration_count", final_state.get("iteration_count", 0))
         corrected_text = updates.get("current_simplified_text", "")
-        preview = corrected_text.replace("\n", " ")[:260]
-        if corrected_text and len(corrected_text) > 260:
-            preview += "..."
-        body = f"Iteration: {iteration_count}\nCorrected text preview: {preview or 'No text returned.'}"
+        preview = corrected_text.replace("\n", " ")
+            
+        body = f"✨ Corrected text preview:\n\"{preview or 'No text returned.'}\""
         return render_stream_card("✏️ Editor", body, node_name)
 
     if node_name == "term_explainer":
         term_explanations = updates.get("term_explanations", {})
-        terms = ", ".join(sorted(term_explanations.keys())) or "No terms found."
-        body = f"Explanations prepared for {len(term_explanations)} term(s).\n{terms}"
+        body = f"🔍 Explanations prepared for {len(term_explanations)} term(s):\n\n"
+        
+        # Formato de etiquetas y explicaciones para los términos
+        if term_explanations:
+            for term, info in sorted(term_explanations.items()):
+                dictionary_term = info.get("dictionary_term", term)
+                explanation = info.get("explanation", "No explanation provided.")
+                
+                body += f"  🏷️ {dictionary_term.upper()}\n  \"{explanation}\"\n\n"
+        else:
+            body += "  No terms found."
+            
         return render_stream_card("📚 Term Explainer", body, node_name)
 
     if node_name == "auditors":
         fact_ok = final_state.get("is_fact_approved", False)
         read_ok = final_state.get("is_readability_approved", False)
-        body = f"Fact Checker: {fact_ok}\nReadability Evaluator: {read_ok}\nApproved: {fact_ok and read_ok}"
+        # Obtenemos la iteración actual para saber si hemos llegado al límite (asumimos 3 como máximo)
+        iteration_count = final_state.get("iteration_count", 0)
+        
+        fact_icon = "✅ PASS" if fact_ok else "❌ FAIL"
+        read_icon = "✅ PASS" if read_ok else "❌ FAIL"
+        
+        is_approved = fact_ok and read_ok
+        
+        # Ajustamos el mensaje a la lógica real del grafo
+        if is_approved:
+            final_icon = "🎉 APPROVED (Proceeding to Term Explainer)"
+        elif iteration_count >= 3:
+            final_icon = "⚠️ REJECTED - ⏭️ MAX ITERATIONS REACHED. Sending last simplified version to Term Explainer."
+        else:
+            final_icon = "⚠️ REJECTED - Sending to Editor for revision"
+        
+        body = f"Final Assessment (Iteration {iteration_count}):\n  ▪️ Fact Checker: {fact_icon}\n  ▪️ Readability Evaluator: {read_icon}\n\nResult: {final_icon}"
         return render_stream_card("📋 Auditor Aggregator", body, node_name)
 
     return render_stream_card(humanize_node_name(node_name), str(updates), node_name)

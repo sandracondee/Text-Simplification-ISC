@@ -84,7 +84,7 @@ def _resolve_drafter_providers() -> dict:
 
 def node_parallel_drafters(state: dict) -> dict:
     print("=" * 40)
-    print(" PARALLEL DRAFTERS ")
+    print(" PARALLEL SIMPLIFIERS ")
     print("=" * 40)
 
     complex_text = state["complex_text"]
