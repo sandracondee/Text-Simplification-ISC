@@ -24,7 +24,6 @@ async def main():
         "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
-        "feedback_history": [],
         "iteration_count": 0,
         "is_fact_approved": False,
         "is_readability_approved": False,
@@ -68,12 +67,10 @@ async def main():
                     metrics = updates.get("current_metrics")
                     print(metrics)
                 
-                # If rejected, print the specific feedback it just generated
-                if not approved:
-                    feedback_list = updates.get("feedback_history", [])
-                    if feedback_list:
-                        # Print the last appended item in the history
-                        print(f"-> Critique sent to Simplifier:\n{feedback_list[-1]}\n")
+                feedback_key = "fact_checker_feedback" if node_name == "fact_checker" else "readability_evaluator_feedback"
+                feedback_text = updates.get(feedback_key, "")
+                if feedback_text:
+                    print(f"-> Critique sent to Simplifier:\n{feedback_text}\n")
 
     print("\n" + "==="*25)
     print("WORKFLOW FINISHED")

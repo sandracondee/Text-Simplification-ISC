@@ -15,78 +15,78 @@ class Explanation(BaseModel):
 class TermExplanainerResult(BaseModel):
     explanations: List[Explanation] = Field(
         description="A list of 3 to 10 complex words and their explanations.",
-        min_length=3,
+        min_length=0,
         max_length=10
     )
 
 async def node_term_explainer(state: dict) -> dict:
 
     try:
-        # mcp_tools = await mcp_manager.get_tools_for_agent(["search_server"])
+        mcp_tools = await mcp_manager.get_tools_for_agent(["search_server"])
         
-        # llm = build_chat_llm(temperature=0.1, 
-        #                      model=os.getenv("TERM_EXPLAINER_MODEL") or None, 
-        #                      provider=os.getenv("TERM_EXPLAINER_PROVIDER") or None)
+        llm = build_chat_llm(temperature=0.1, 
+                             model=os.getenv("TERM_EXPLAINER_MODEL") or None, 
+                             provider=os.getenv("TERM_EXPLAINER_PROVIDER") or None)
 
-        # agent = create_agent(
-        #     model=llm, 
-        #     tools=mcp_tools, 
-        #     response_format=TermExplanainerResult
-        # )
+        agent = create_agent(
+            model=llm, 
+            tools=mcp_tools, 
+            response_format=TermExplanainerResult
+        )
 
-        # system_prompt_term_explainer = (
-        #     "You are an expert Medical Term Explainer. "
-        #     "Your task is to identify between 3 and 10 complex medical terms in a simplified text and extract their definitions from our local dictionary.\n\n"
-        #     "INSTRUCTIONS:\n"
-        #     "1. Read the text and extract 3 to 10 complex words (e.g., 'hypertension', 'Tourette').\n"
-        #     "2. For EACH extracted term, you MUST call your `lookup_medical_term` tool.\n"
-        #     "3. The tool will return a response like: \"Found as 'Tourette syndrome': When you make unusual movements or sounds. \"\n"
-        #     "4. Fill the 'searched_term' with the word you found in the text, the 'dictionary_term' with the word matched by the tool, and the 'explanation' with the text provided by the tool.\n"
-        #     "5. CRITICAL: DO NOT invent, rewrite or summarize the explanation. You must copy the explanation EXACTLY as the tool returns it.\n"
-        #     "6. If the tool returns 'Term not found', DO NOT guess. Discard that word and search for another one."
-        # )
+        system_prompt_term_explainer = (
+            "You are an expert Medical Term Explainer. "
+            "Your task is to identify between 3 and 10 complex medical terms in a simplified text and extract their definitions from our local dictionary.\n\n"
+            "INSTRUCTIONS:\n"
+            "1. Read the text and extract 3 to 10 complex words (e.g., 'hypertension', 'Tourette').\n"
+            "2. For EACH extracted term, you MUST call your `lookup_medical_term` tool.\n"
+            "3. The tool will return a response like: \"Found as 'Tourette syndrome': When you make unusual movements or sounds. \"\n"
+            "4. Fill the 'searched_term' with the word you found in the text, the 'dictionary_term' with the word matched by the tool, and the 'explanation' with the text provided by the tool.\n"
+            "5. CRITICAL: DO NOT invent, rewrite or summarize the explanation. You must copy the explanation EXACTLY as the tool returns it.\n"
+            "6. If the tool returns 'Term not found', DO NOT guess. Discard that word and search for another one."
+        )
 
-        # human_prompt_term_explainer = (
-        #     "Extract 3 to 10 complex words from this text, search for their meanings using your tool, and save the exact explanations:\n\n"
-        #     "---\n"
-        #     "TEXT:\n"
-        #     "{current_simplified_text}\n\n"
-        #     "---\n"
-        #     "Return the structured term explanations."
-        # )
+        human_prompt_term_explainer = (
+            "Extract 3 to 10 complex words from this text, search for their meanings using your tool, and save the exact explanations:\n\n"
+            "---\n"
+            "TEXT:\n"
+            "{current_simplified_text}\n\n"
+            "---\n"
+            "Return the structured term explanations."
+        )
 
-        # prompt_term_explainer = ChatPromptTemplate.from_messages([
-        #     ("system", system_prompt_term_explainer),
-        #     ("human", human_prompt_term_explainer)
-        # ])
+        prompt_term_explainer = ChatPromptTemplate.from_messages([
+            ("system", system_prompt_term_explainer),
+            ("human", human_prompt_term_explainer)
+        ])
 
-        # messages = prompt_term_explainer.format_messages(
-        #     current_simplified_text=state["current_simplified_text"]
-        # )
+        messages = prompt_term_explainer.format_messages(
+            current_simplified_text=state["current_simplified_text"]
+        )
         
-        # response = await agent.ainvoke({"messages": messages})
+        response = await agent.ainvoke({"messages": messages})
 
-        response = {
-            "structured_response": TermExplanainerResult(
-                explanations=[
-                    Explanation(
-                        searched_term="diabetes mellitus",
-                        dictionary_term="Diabetes Mellitus",
-                        explanation="A group of metabolic disorders characterized by high blood sugar levels over a prolonged period."
-                    ),
-                    Explanation(
-                        searched_term="glycosylated haemoglobin A1c",
-                        dictionary_term="Glycosylated Haemoglobin A1c",
-                        explanation="A measure of average blood sugar levels over the past 2-3 months."
-                    ),
-                    Explanation(
-                        searched_term="myocardial infarction",
-                        dictionary_term="Myocardial Infarction",
-                        explanation="A blockage of blood flow to the heart muscle, commonly known as a heart attack."
-                    )
-                ]
-            )
-        }
+        # response = {
+        #     "structured_response": TermExplanainerResult(
+        #         explanations=[
+        #             Explanation(
+        #                 searched_term="diabetes mellitus",
+        #                 dictionary_term="Diabetes Mellitus",
+        #                 explanation="A group of metabolic disorders characterized by high blood sugar levels over a prolonged period."
+        #             ),
+        #             Explanation(
+        #                 searched_term="glycosylated haemoglobin A1c",
+        #                 dictionary_term="Glycosylated Haemoglobin A1c",
+        #                 explanation="A measure of average blood sugar levels over the past 2-3 months."
+        #             ),
+        #             Explanation(
+        #                 searched_term="myocardial infarction",
+        #                 dictionary_term="Myocardial Infarction",
+        #                 explanation="A blockage of blood flow to the heart muscle, commonly known as a heart attack."
+        #             )
+        #         ]
+        #     )
+        # }
         
         result: TermExplanainerResult = response["structured_response"]
 

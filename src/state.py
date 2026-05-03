@@ -1,5 +1,4 @@
-from typing import TypedDict, Annotated, List, Dict
-import operator
+from typing import TypedDict, Dict
 
 class GraphState(TypedDict):
     complex_text: str
@@ -12,7 +11,6 @@ class GraphState(TypedDict):
     selected_draft_letter: str
     current_simplified_text: str
     current_metrics: dict
-    feedback_history: Annotated[List[str], operator.add]
     iteration_count: int
     is_fact_approved: bool
     is_readability_approved: bool

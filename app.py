@@ -495,7 +495,7 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         approved = updates.get("is_readability_approved", False)
         status_icon = "✅ PASS" if approved else "❌ FAIL"
         metrics = updates.get("current_metrics", {})
-        feedback = updates.get("readability_evaluator_feedback", "") if approved else None
+        feedback = updates.get("readability_evaluator_feedback", "") if not approved else None
         
 
         # Formateamos las métricas como una lista punteada
@@ -569,7 +569,6 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
         "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
-        "feedback_history": [],
         "iteration_count": 0,
         "is_fact_approved": False,
         "is_readability_approved": False,
@@ -583,19 +582,10 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
 
     hood_log = st.empty()
 
-    hood_log.markdown(
-        "<div class='muted-note'>Live node updates will appear here as the workflow runs.</div>",
-        unsafe_allow_html=True,
-    )
-
     async for output in app.astream(initial_state, stream_mode="updates"):
         for node_name, updates in output.items():
             for key, value in updates.items():
-                if key == "feedback_history":
-                    final_state.setdefault("feedback_history", [])
-                    final_state["feedback_history"].extend(value)
-                else:
-                    final_state[key] = value
+                final_state[key] = value
 
             card_html = format_update_card(node_name, updates, final_state)
             stream_entries.append(card_html)
@@ -620,6 +610,9 @@ def main() -> None:
     if "input_text" not in st.session_state:
         st.session_state.input_text = DEFAULT_COMPLEX_TEXT
 
+    if "reference_text" not in st.session_state:
+        st.session_state.reference_text = DEFAULT_REFERENCE_TEXT
+
     if "show_results" not in st.session_state:
         st.session_state.show_results = False
 
@@ -631,6 +624,7 @@ def main() -> None:
         if st.button("Simplify another medical abstract", type="primary"):
             st.session_state.show_results = False
             st.session_state.final_state = None
+            st.session_state.reference_text = DEFAULT_REFERENCE_TEXT
             st.rerun()
 
         st.divider()
@@ -708,6 +702,7 @@ def main() -> None:
                             with c2:
                                 if st.button("Use this example", key=f"example_{example['id']}", use_container_width=True):
                                     st.session_state.input_text = example["complex"]
+                                    st.session_state.reference_text = example.get("simple", DEFAULT_REFERENCE_TEXT)
                                     st.session_state.show_results = False
                                     st.rerun()
                 
@@ -741,6 +736,10 @@ def main() -> None:
                 return
 
             st.session_state.input_text = user_text_stripped
+
+            # Keep the selected example reference when available.
+            # If user wrote a custom text, fallback to the default reference.
+            reference_text = st.session_state.reference_text or DEFAULT_REFERENCE_TEXT
 
             try:
                 graph = get_graph()
@@ -792,7 +791,7 @@ def main() -> None:
                     run_graph_execution(
                         graph,
                         st.session_state.input_text,
-                        DEFAULT_REFERENCE_TEXT,
+                        reference_text,
                     )
                 )
 

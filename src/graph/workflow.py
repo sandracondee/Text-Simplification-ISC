@@ -31,13 +31,13 @@ def router_logic(state: GraphState) -> str:
     readability_ok = state.get("is_readability_approved", False)
     approved = fact_ok and readability_ok
 
-    print(
-        f"\n--- ROUTER: Iteration {state.get('iteration_count', 0)}, "
-        f"Fact: {fact_ok}, Readability: {readability_ok} ---"
-    )
+    # print(
+    #     f"\n--- ROUTER: Iteration {state.get('iteration_count', 0)}, "
+    #     f"Fact: {fact_ok}, Readability: {readability_ok} ---"
+    # )
 
     if approved:
-        print("-> AUDIT APPROVED. Workflow finished.")
+        #print("-> AUDIT APPROVED. Workflow finished.")
         return "term_explainer"
 
     if state["iteration_count"] >= MAX_ITER:
