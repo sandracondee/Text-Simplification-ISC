@@ -3,13 +3,13 @@
 primaryColor = "#ADAF7E"
 
 # Color de fondo principal de la aplicación
-backgroundColor = "#EDEDE9"
+backgroundColor = "#D4D7AD"
 
 # Color de fondo de la barra lateral (sidebar) y widgets secundarios
-secondaryBackgroundColor = "#D4D7AD"
+secondaryBackgroundColor = "#EDEDE9"
 
 # Color del texto (puedes ajustarlo según prefieras, aquí uno oscuro para contraste)
-textColor = "#31333F"
+textColor = "#454632"
 
 [client]
 # Oculta el botón de "Deploy" arriba a la derecha

@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 from src.workflow import build_graph
 
-
 load_dotenv()
 
 
@@ -32,7 +31,6 @@ CUSTOM_CSS = """
     }
 
     .text-panel {
-        border: 3px solid rgba(0, 0, 0, 0.75);
         border-radius: 0.8rem;
         padding: 1rem;
         line-height: 1.65;
@@ -48,10 +46,21 @@ CUSTOM_CSS = """
         border: 2px solid rgba(0, 0, 0, 1);  /* Borde negro de 2px */
     }
 
-    .stFormSubmitButton > button {
+    .stButton > p {
+        margin: 0; /* Asegura que el texto esté centrado */
+    }
+
+    .stButton > button, .stFormSubmitButton > button {
         background-color: #ADAF7E; /* Tu color secundario */
         color: #31333F;             /* Color del texto */
-        border: 2px solid rgba(0, 0, 0, 1);  /* Borde negro de 2px */
+        border: none !important;    /* Quitamos el borde */
+        transition: background-color 0.2s ease, color 0.2s ease; /* Transición suave */
+    }
+
+    /* Efecto al pasar el ratón por encima (Hover) */
+    .stButton > button:hover, .stFormSubmitButton > button:hover {
+        background-color: #454632 !important; /* Fondo oscuro */
+        color: #EDEDE9 !important;             /* Texto clarito (casi blanco) */
     }
 
     .stream-card {
@@ -112,14 +121,26 @@ CUSTOM_CSS = """
         border-left-color: #718096; 
     }
 
-    
 
     .tooltip {
         position: relative;
         display: inline;
-        border-bottom: 1px dotted var(--primary-color, #0b6efd);
+        /* Quitamos la línea de abajo que tenías antes */
+        /* border-bottom: 1px dotted var(--primary-color, #0b6efd); */
+        
+        /* Efecto subrayador verde oscuro */
+        background-color: #8C9364; /* Un verde más oscuro que tu fondo #ADAF7E */
+        padding: 0.1rem 0.3rem;    /* Espacio extra para que el color sobresalga de la palabra */
+        border-radius: 0.25rem;    /* Bordes ligeramente redondeados */
+        color: #31333F;            /* Mantenemos el color de texto oscuro */
         cursor: help;
         font-weight: 600;
+        transition: background-color 0.2s ease; /* Transición suave */
+    }
+
+    /* Opcional: Un pequeño efecto para que se oscurezca un poco más al pasar el ratón */
+    .tooltip:hover {
+        background-color: #788053; 
     }
 
     /* Light mode tooltips */
@@ -174,8 +195,8 @@ CUSTOM_CSS = """
             padding: 0.7rem 0.85rem;
             border-radius: 0.75rem;
             border: 1px solid rgba(200, 200, 200, 0.25);
-            background: #2c2f33;
-            color: #e0e0e0;
+            background: #454632;
+            color: #EDEDE9;
             box-shadow: 0 0.5rem 1.3rem rgba(0, 0, 0, 0.3);
             font-weight: 400;
             line-height: 1.45;
@@ -190,7 +211,7 @@ CUSTOM_CSS = """
             transform: translateX(-50%);
             border-width: 0.45rem;
             border-style: solid;
-            border-color: #2c2f33 transparent transparent transparent;
+            border-color: #454632 transparent transparent transparent;
         }
     }
 
@@ -432,9 +453,6 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
 def main() -> None:
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     st.markdown("# Medical Plain Language Simplifier")
-    st.write(
-        "Simplify complex medical text with a multi-agent LangGraph workflow and inspect the generated reasoning in real time."
-    )
 
     # Initialize session state
     if "final_state" not in st.session_state:
@@ -448,7 +466,7 @@ def main() -> None:
 
     # Reset to initial screen
     if st.session_state.show_results:
-        if st.button("Simplify another text", use_container_width=True):
+        if st.button("Simplify another medical abstract"):
             st.session_state.show_results = False
             st.session_state.final_state = None
             st.rerun()
@@ -488,12 +506,13 @@ def main() -> None:
         # Initial screen: input form
         with st.form("simplifier_form", clear_on_submit=False):
             user_text = st.text_area(
-                "Complex medical text",
+                "Medical abstract to simplify:",
                 value=st.session_state.input_text,
                 height=220,
-                placeholder="Paste a medical abstract or clinical passage here...",
+                placeholder="Write your medical abstract here.",
             )
-            submitted = st.form_submit_button("Simplify", use_container_width=True)
+            
+            submitted = st.form_submit_button("Simplify")
 
         if submitted:
             user_text_stripped = user_text.strip()
@@ -539,38 +558,6 @@ def _display_execution_summary(final_state: Dict[str, Any]) -> None:
             html_card = log_entry["html"]
             with st.expander(f"Step {idx}: {humanize_node_name(node_name)}", expanded=False):
                 st.markdown(html_card, unsafe_allow_html=True)
-    
-    st.divider()
-
-    # Show final metrics
-    current_metrics = final_state.get("current_metrics", {})
-    if current_metrics:
-        st.markdown("**Readability Metrics:**")
-        metrics_text = format_metrics(current_metrics)
-        st.markdown(f"```\n{metrics_text}\n```")
-
-    # Show approval status
-    is_fact_approved = final_state.get("is_fact_approved", False)
-    is_readability_approved = final_state.get("is_readability_approved", False)
-
-    st.markdown("**Final Approval Status:**")
-    col1, col2 = st.columns(2)
-    with col1:
-        fact_status = "✅ Approved" if is_fact_approved else "❌ Rejected"
-        st.markdown(f"**Fact Checker:** {fact_status}")
-    with col2:
-        read_status = "✅ Approved" if is_readability_approved else "❌ Rejected"
-        st.markdown(f"**Readability Evaluator:** {read_status}")
-
-    # Show term explanations
-    term_explanations = final_state.get("term_explanations", {})
-    if term_explanations:
-        st.markdown("**Identified Complex Terms:**")
-        for term, info in sorted(term_explanations.items()):
-            with st.expander(f"📖 {term}"):
-                st.markdown(f"**Dictionary Term:** {info.get('dictionary_term', term)}")
-                st.markdown(f"**Explanation:** {info.get('explanation', 'N/A')}")
-
 
 if __name__ == "__main__":
     main()
