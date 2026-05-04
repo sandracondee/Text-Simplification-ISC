@@ -1,5 +1,6 @@
 from langgraph.graph import END, StateGraph, START
 from src.state import GraphState
+from src.agents.guardrail import node_guardrail
 from src.agents.pl_simplifier import node_parallel_drafters
 from src.agents.judge import node_judge
 from src.agents.fact_checker import node_fact_checker
@@ -9,6 +10,18 @@ from src.agents.term_explainer import node_term_explainer
 from src.agents.step_delay import pause_step_sync
 
 MAX_ITER = 3
+
+
+def guardrail_router(state: GraphState) -> str:
+    """
+    Routes in-scope inputs into the simplification workflow and blocks out-of-scope inputs early.
+    """
+    if state.get("guardrail_triggered", False) or not state.get("is_input_in_scope", True):
+        #print("-> INPUT IS OUT OF SCOPE. Stopping the workflow at the guardrail.")
+        return "end"
+
+    #print("-> INPUT ACCEPTED BY GUARDRAIL. Routing to simplification pipeline.")
+    return "parallel_drafters"
 
 def node_auditors(state: GraphState) -> dict:
     """
@@ -53,6 +66,7 @@ def build_graph():
     """
     workflow = StateGraph(GraphState)
 
+    workflow.add_node("guardrail", node_guardrail)
     workflow.add_node("parallel_drafters", node_parallel_drafters)
     workflow.add_node("judge", node_judge)
     workflow.add_node("fact_checker", node_fact_checker)
@@ -61,7 +75,17 @@ def build_graph():
     workflow.add_node("editor", node_editor)
     workflow.add_node("term_explainer", node_term_explainer)
 
-    workflow.add_edge(START, "parallel_drafters")
+    workflow.add_edge(START, "guardrail")
+
+    workflow.add_conditional_edges(
+        "guardrail",
+        guardrail_router,
+        {
+            "parallel_drafters": "parallel_drafters",
+            "end": END,
+        }
+    )
+
     workflow.add_edge("parallel_drafters", "judge")
 
     workflow.add_edge("judge", "fact_checker")

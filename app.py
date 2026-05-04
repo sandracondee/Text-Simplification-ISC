@@ -171,6 +171,10 @@ CUSTOM_CSS = """
     .card-readability-evaluator::before { border-color: #BF870E; }
     .card-readability-evaluator h4 { background-color: #BF870E; color: #EDEDE9; }
 
+    /* Guardrail */
+    .card-guardrail::before { border-color: #D97706; }
+    .card-guardrail h4 { background-color: #D97706; color: #EDEDE9; }
+
     /* Term explainer */
     .card-term-explainer::before { border-color: #70965D; }
     .card-term-explainer h4 { background-color: #70965D; color: #EDEDE9; }
@@ -338,6 +342,7 @@ def load_examples() -> list[Dict[str, str]]:
 
 def humanize_node_name(node_name: str) -> str:
     labels = {
+        "guardrail": "Input Guardrail",
         "parallel_drafters": "Parallel Simplifiers",
         "judge": "Judge",
         "fact_checker": "Fact Checker",
@@ -433,6 +438,29 @@ def format_metrics(metrics: Dict[str, Any]) -> str:
 
 
 def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dict[str, Any]) -> str:
+    if node_name == "guardrail":
+        in_scope = updates.get("is_input_in_scope", True)
+        rationale = updates.get("guardrail_rationale", "")
+        refusal_message = updates.get("guardrail_message", "")
+        verdict = "✅ IN SCOPE" if in_scope else "⛔ OUT OF SCOPE"
+
+        safe_rationale = html.escape(rationale).replace('\n', '<br>')
+        body = (
+            f"<details style='margin-bottom: 0.5rem; cursor: pointer;'>"
+            f"  <summary style='font-weight: 600; outline: none;'>🛡️ Scope check</summary>"
+            f"  <div style='margin-top: 0.5rem; padding: 0.8rem; background-color: rgba(0,0,0,0.05); border-radius: 0.4rem; font-size: 0.95em;'>"
+            f"      {safe_rationale}"
+            f"  </div>"
+            f"</details>"
+            f"<strong>Verdict: {verdict}</strong>"
+        )
+
+        if refusal_message and not in_scope:
+            safe_refusal = html.escape(refusal_message).replace('\n', '<br>')
+            body += f"\n\n📢 Message to user: {safe_refusal}"
+
+        return render_stream_card("🛡️ Input Guardrail", body, node_name, escape_body=False)
+
     if node_name == "parallel_drafters":
         drafts = updates.get("drafts", {})
         draft_lines = []
@@ -569,6 +597,10 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
         "complex_text": complex_text,
         "reference_text": reference_text,
         "drafts": {},
+        "is_input_in_scope": True,
+        "guardrail_triggered": False,
+        "guardrail_rationale": "",
+        "guardrail_message": "",
         "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
@@ -733,7 +765,6 @@ def main() -> None:
             else:
                 st.info("No examples available from the dataset.")
         if submitted:
-            examples_placeholder.empty()
             user_text_stripped = user_text.strip()
             if not user_text_stripped:
                 st.error("Please enter some text before running the simplifier.")
@@ -745,6 +776,7 @@ def main() -> None:
             # If an example was selected, keep the example's reference_text.
             reference_text = st.session_state.reference_text
 
+            examples_placeholder.empty()
             try:
                 graph = get_graph()
                 loading_placeholder = st.empty()
@@ -799,11 +831,73 @@ def main() -> None:
                     )
                 )
 
-                # 4. Limpieza
+                # 4. Limpieza y chequeo del guardaraíl
                 loading_placeholder.empty()
-                st.session_state.final_state = final_state
-                st.session_state.show_results = True
-                st.rerun()
+
+                # Si el guardaraíl fue activado, mostrar mensaje de rechazo y volver a mostrar ejemplos
+                if final_state.get("guardrail_triggered", False):
+                    st.error(
+                        f"❌ **Input out of scope**\n\n{final_state.get('guardrail_message', 'Please provide a medical or biomedical text.')}"
+                    )
+                    st.divider()
+                    
+                    # Recrear la sección de ejemplos
+                    st.markdown("### Example Texts")
+                    st.markdown("Navigate through examples and select one to try:")
+                    
+                    examples = load_examples()
+                    if examples:
+                        examples_per_view = 3
+                        total_examples = len(examples)
+                        max_index = max(0, total_examples - examples_per_view)
+                        
+                        carousel_items = examples[st.session_state.carousel_index:st.session_state.carousel_index + examples_per_view]
+                        cols = st.columns(len(carousel_items))
+                        
+                        for col_idx, example in enumerate(carousel_items):
+                            with cols[col_idx]:
+                                with st.container(border=True):
+                                    st.markdown(f"<div style='font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;'> Abstract: {html.escape(example['pair_id'])}</div>", unsafe_allow_html=True)
+                                    
+                                    st.markdown(
+                                        f"<div style='height: 200px; overflow-y: auto; font-size: 1rem; "
+                                        f"margin-bottom: 20px; padding-right: 8px; line-height: 1.6; color: #31333F;'>"
+                                        f"{html.escape(example['complex'])}"
+                                        f"</div>",
+                                        unsafe_allow_html=True
+                                    )
+                                    
+                                    c1, c2, c3 = st.columns([1, 1.5, 1])
+                                    with c2:
+                                        if st.button("Use this example", key=f"example_retry_{example['id']}", use_container_width=True):
+                                            st.session_state.input_text = example["complex"]
+                                            st.session_state.reference_text = example.get("simple", DEFAULT_REFERENCE_TEXT)
+                                            st.rerun()
+                        
+                        nav_col1, spacer1, nav_col2, spacer2, nav_col3 = st.columns([0.75, 1.5, 4, 1.5, 0.75], vertical_alignment="center")
+                        
+                        with nav_col1:
+                            if st.button("◀ Previous", key="prev_examples_retry", use_container_width=True):
+                                st.session_state.carousel_index = (st.session_state.carousel_index - 1) % (max_index + 1)
+                                st.rerun()
+                        
+                        with nav_col2:
+                            current_start = st.session_state.carousel_index + 1
+                            current_end = min(st.session_state.carousel_index + examples_per_view, total_examples)
+                            st.markdown(
+                                f"<p style='text-align: center; color: #888; margin-top: 0.4rem;'>Showing {current_start}-{current_end} of {total_examples}</p>",
+                                unsafe_allow_html=True
+                            )
+                            
+                        with nav_col3:
+                            if st.button("Next ▶", key="next_examples_retry", use_container_width=True):
+                                st.session_state.carousel_index = (st.session_state.carousel_index + 1) % (max_index + 1)
+                                st.rerun()
+                else:
+                    # El guardaraíl pasó, mostrar resultados
+                    st.session_state.final_state = final_state
+                    st.session_state.show_results = True
+                    st.rerun()
 
             except Exception as exc:
                 st.error(f"The workflow could not be executed: {exc}")

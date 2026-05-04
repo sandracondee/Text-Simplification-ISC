@@ -21,6 +21,10 @@ async def main():
         "complex_text": sample_complex_text,
         "reference_text": sample_reference_text,
         "drafts": {},
+        "is_input_in_scope": True,
+        "guardrail_triggered": False,
+        "guardrail_rationale": "",
+        "guardrail_message": "",
         "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
@@ -102,7 +106,12 @@ async def main():
     else:
         print("- No term explanations were provided.")
 
-    if not final_state.get("is_approved"):
+    if final_state.get("guardrail_triggered"):
+        print("\n🛡️ GUARDRAIL ACTIVATED: The input was outside the scope of the medical simplification system.")
+        message = final_state.get("guardrail_message", "")
+        if message:
+            print(f"-> {message}")
+    elif not final_state.get("is_approved"):
         print("\n⚠️ WARNING: The system reached the maximum iteration limit (3) without achieving full approval from the evaluators. Human review is recommended.")
     else:
         print("\n✅ SUCCESS: The text was fully approved by both the Fact-Checker and Readability Evaluator.")
