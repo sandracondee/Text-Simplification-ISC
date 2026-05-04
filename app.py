@@ -305,10 +305,10 @@ CUSTOM_CSS = """
 """
 
 
-DEFAULT_COMPLEX_TEXT = """Ten prospective, parallel-group design, randomised controlled trials, involving a total of 577 participants with type 1 and type 2 diabetes mellitus, were identified. Risk of bias was high or unclear in all but two trials, which were assessed as having moderate risk of bias. Risk of bias in some domains was high in 50% of trials. Oral monopreparations of cinnamon (predominantly Cinnamomum cassia) were administered at a mean dose of 2 g daily, for a period ranging from 4 to 16 weeks. The effect of cinnamon on fasting blood glucose level was inconclusive. No statistically significant difference in glycosylated haemoglobin A1c (HbA1c), serum insulin or postprandial glucose was found between cinnamon and control groups. There were insufficient data to pool results for insulin sensitivity. No trials reported health-related quality of life, morbidity, mortality or costs. Adverse reactions to oral cinnamon were infrequent and generally mild in nature. There is insufficient evidence to support the use of cinnamon for type 1 or type 2 diabetes mellitus. Further trials, which address the issues of allocation concealment and blinding, are now required. The inclusion of other important endpoints, such as health-related quality of life, diabetes complications and costs, is also needed."""
+DEFAULT_COMPLEX_TEXT = ""
 
 
-DEFAULT_REFERENCE_TEXT = """The authors identified 10 randomised controlled trials, which involved 577 participants with diabetes mellitus. Cinnamon was administered in tablet or capsule form, at a mean dose of 2 g daily, for four to 16 weeks. Cinnamon bark has been shown in a number of animal studies to improve blood sugar levels, though its effect in humans is not too clear. Hence, the review authors set out to determine the effect of oral cinnamon extract on blood sugar and other outcomes. The review authors found cinnamon to be no more effective than placebo, another active medication or no treatment in reducing glucose levels and glycosylated haemoglobin A1c (HbA1c), a long-term measurement of glucose control. None of the trials looked at health-related quality of life, morbidity, death from any cause or costs. Adverse reactions to cinnamon treatment were generally mild and infrequent. Further trials investigating long-term benefits and risks of the use of cinnamon for diabetes mellitus are required. Rigorous study design, quality reporting of study methods, and consideration of important outcomes such as health-related quality of life and diabetes complications, are key areas in need of attention."""
+DEFAULT_REFERENCE_TEXT = ""
 
 
 def get_graph():
@@ -608,10 +608,10 @@ def main() -> None:
         st.session_state.final_state = None
 
     if "input_text" not in st.session_state:
-        st.session_state.input_text = DEFAULT_COMPLEX_TEXT
+        st.session_state.input_text = ""
 
     if "reference_text" not in st.session_state:
-        st.session_state.reference_text = DEFAULT_REFERENCE_TEXT
+        st.session_state.reference_text = ""
 
     if "show_results" not in st.session_state:
         st.session_state.show_results = False
@@ -624,7 +624,8 @@ def main() -> None:
         if st.button("Simplify another medical abstract", type="primary"):
             st.session_state.show_results = False
             st.session_state.final_state = None
-            st.session_state.reference_text = DEFAULT_REFERENCE_TEXT
+            st.session_state.input_text = ""
+            st.session_state.reference_text = ""
             st.rerun()
 
         st.divider()
@@ -737,9 +738,9 @@ def main() -> None:
 
             st.session_state.input_text = user_text_stripped
 
-            # Keep the selected example reference when available.
-            # If user wrote a custom text, fallback to the default reference.
-            reference_text = st.session_state.reference_text or DEFAULT_REFERENCE_TEXT
+            # If no reference was selected (manual input), set it to empty.
+            # If an example was selected, keep the example's reference_text.
+            reference_text = st.session_state.reference_text
 
             try:
                 graph = get_graph()
