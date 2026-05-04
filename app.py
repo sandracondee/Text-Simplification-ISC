@@ -496,18 +496,21 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         status_icon = "✅ PASS" if approved else "❌ FAIL"
         metrics = updates.get("current_metrics", {})
         feedback = updates.get("readability_evaluator_feedback", "") if not approved else None
+        reference_text = updates.get("reference_text", "")
         
-
-        # Formateamos las métricas como una lista punteada
-        lines = []
-        for metric, value in metrics.items():
-            if isinstance(value, float):
-                lines.append(f"  ▪️ {metric}: {value:.2f}")
-            else:
-                lines.append(f"  ▪️ {metric}: {value}")
-        metrics_text = "\n".join(lines) or "  No metrics reported."
+        body = f"Verdict: {status_icon}"
         
-        body = f"Verdict: {status_icon}\n\n📊 Metrics Details:\n{metrics_text}"
+        # Solo mostrar métricas si reference_text fue proporcionado
+        if reference_text != "":
+            lines = []
+            for metric, value in metrics.items():
+                if isinstance(value, float):
+                    lines.append(f"  ▪️ {metric}: {value:.2f}")
+                else:
+                    lines.append(f"  ▪️ {metric}: {value}")
+            metrics_text = "\n".join(lines) or "  No metrics reported."
+            body += f"\n\n📊 Metrics Details:\n{metrics_text}"
+        
         if feedback:
             safe_feedback = html.escape(feedback).replace('\n', '<br>')
             body += f"\n\n📢 Feedback: {safe_feedback}"
