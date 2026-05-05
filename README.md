@@ -22,6 +22,8 @@ El sistema implementa un flujo de trabajo **Draft-Select-Audit-Edit** mediante L
 
 ### Componentes principales
 
+![Agentic workflow](assets/agent-workflow.png)
+
 1. **Parallel Drafters**: Generan 4 candidatos de simplificación (A/B/C/D) en paralelo
      - Drafter A, B, C, D: Modelos LLM especializados en redacción simplificada
    
