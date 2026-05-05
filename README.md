@@ -39,7 +39,7 @@ El sistema implementa un flujo de trabajo **Draft-Select-Audit-Edit** mediante L
 
 Más detalles del workflow en [src/graph/workflow.py](src/graph/workflow.py).
 
-Implementación de los agentes en [src/graph/workflow.py](src/agents/).
+Implementación de los agentes en [src/agents/](src/agents/).
 
 ## Requisitos
 
@@ -60,7 +60,7 @@ Implementación de los agentes en [src/graph/workflow.py](src/agents/).
 ### 1. Clona el repositorio
 
 ```bash
-git clone https://github.com/usuario/Text-Simplification-ISC.git
+git clone https://github.com/sandracondee/Text-Simplification-ISC.git
 cd Text-Simplification-ISC
 ```
 
