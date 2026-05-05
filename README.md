@@ -22,19 +22,24 @@ El sistema implementa un flujo de trabajo **Draft-Select-Audit-Edit** mediante L
 
 ![Agentic workflow](assets/agent-workflow.png)
 
-1. **Parallel Drafters**: Generan 4 candidatos de simplificación (A/B/C/D) en paralelo
-     - Drafter A, B, C, D: Modelos LLM especializados en redacción simplificada
-   
-2. **Judge (Juez)**: Selecciona el mejor candidato basado en estilo y cohesión
-   
-3. **Parallel Auditors**: Validan la calidad de la simplificación
-     - Fact Checker: Verifica fidelidad numérica y clínica
-     - Readability Evaluator: Valida accesibilidad y métricas de legibilidad
-   
-4. **Editor**: Aplica retroalimentación de auditoría y refina el texto
-     - Loop guard: Máximo 3 iteraciones para evitar bucles infinitos
+1. **Guardrails**: Agente encargado de comprobar que la entrada pertenezca al dominio médico/biomédico.
 
-Para más detalles, consulta [src/graph/workflow.py](src/graph/workflow.py).
+2. **Parallel Drafters**: Generan 4 propuestas de versiones simplificadas en paralelo.
+   
+2. **Judge (Juez)**: Selecciona el mejor candidato basándose en directrices de [Plain Language](https://plainlanguagenetwork.org/plain-language/what-is-plain-language/), naturalidad y cohesión.
+   
+3. **Evaluators**: Validan la calidad de la simplificación
+     - **Fact Checker**: Asegura la fidelidad numérica y clínica respecto a la entrada original.
+     - **Readability Evaluator**: Valida accesibilidad y métricas de legibilidad (puede hacer uso de una herramienta vía [MCP](https://modelcontextprotocol.io/docs/getting-started/intro))
+   
+4. **Editor**: Mejora la versión simplificada teniendo en cuenta el feedback de los evaluadores.
+     - Loop guard: Máximo 3 iteraciones para evitar bucles infinitos.
+
+5. **Term Explainer**: Agente cuya tarea es identificar términos complejos en la simplificación final y obtener una explicación en Plain Language a través de una herramienta MCP.
+
+Más detalles del workflow en [src/graph/workflow.py](src/graph/workflow.py).
+
+Implementación de los agentes en [src/graph/workflow.py](src/agents/).
 
 ## Requisitos
 
