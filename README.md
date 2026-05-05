@@ -183,7 +183,7 @@ python main.py
 
 ## Contribuir
 
-Las contribuciones son bienvenidas. Para contribuir:
+Las contribuciones son bienvenidas 😊. Para contribuir:
 
 1. **Fork** el repositorio
 2. Crea una rama para tu feature (`git checkout -b feature/mi-mejora`)
