@@ -171,10 +171,6 @@ CUSTOM_CSS = """
     .card-readability-evaluator::before { border-color: #BF870E; }
     .card-readability-evaluator h4 { background-color: #BF870E; color: #EDEDE9; }
 
-    /* Guardrail */
-    .card-guardrail::before { border-color: #D97706; }
-    .card-guardrail h4 { background-color: #D97706; color: #EDEDE9; }
-
     /* Term explainer */
     .card-term-explainer::before { border-color: #70965D; }
     .card-term-explainer h4 { background-color: #70965D; color: #EDEDE9; }
@@ -342,7 +338,7 @@ def load_examples() -> list[Dict[str, str]]:
 
 def humanize_node_name(node_name: str) -> str:
     labels = {
-        "guardrail": "Input Guardrail",
+        "guardrail": "Guardrail",
         "parallel_drafters": "Parallel Simplifiers",
         "judge": "Judge",
         "fact_checker": "Fact Checker",
@@ -438,29 +434,6 @@ def format_metrics(metrics: Dict[str, Any]) -> str:
 
 
 def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dict[str, Any]) -> str:
-    if node_name == "guardrail":
-        in_scope = updates.get("is_input_in_scope", True)
-        rationale = updates.get("guardrail_rationale", "")
-        refusal_message = updates.get("guardrail_message", "")
-        verdict = "✅ IN SCOPE" if in_scope else "⛔ OUT OF SCOPE"
-
-        safe_rationale = html.escape(rationale).replace('\n', '<br>')
-        body = (
-            f"<details style='margin-bottom: 0.5rem; cursor: pointer;'>"
-            f"  <summary style='font-weight: 600; outline: none;'>🛡️ Scope check</summary>"
-            f"  <div style='margin-top: 0.5rem; padding: 0.8rem; background-color: rgba(0,0,0,0.05); border-radius: 0.4rem; font-size: 0.95em;'>"
-            f"      {safe_rationale}"
-            f"  </div>"
-            f"</details>"
-            f"<strong>Verdict: {verdict}</strong>"
-        )
-
-        if refusal_message and not in_scope:
-            safe_refusal = html.escape(refusal_message).replace('\n', '<br>')
-            body += f"\n\n📢 Message to user: {safe_refusal}"
-
-        return render_stream_card("🛡️ Input Guardrail", body, node_name, escape_body=False)
-
     if node_name == "parallel_drafters":
         drafts = updates.get("drafts", {})
         draft_lines = []
@@ -524,12 +497,10 @@ def format_update_card(node_name: str, updates: Dict[str, Any], final_state: Dic
         status_icon = "✅ PASS" if approved else "❌ FAIL"
         metrics = updates.get("current_metrics", {})
         feedback = updates.get("readability_evaluator_feedback", "") if not approved else None
-        reference_text = updates.get("reference_text", "")
         
         body = f"Verdict: {status_icon}"
         
-        # Solo mostrar métricas si reference_text fue proporcionado
-        if reference_text != "":
+        if metrics:
             lines = []
             for metric, value in metrics.items():
                 if isinstance(value, float):
@@ -597,10 +568,7 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
         "complex_text": complex_text,
         "reference_text": reference_text,
         "drafts": {},
-        "is_input_in_scope": True,
         "guardrail_triggered": False,
-        "guardrail_rationale": "",
-        "guardrail_message": "",
         "selected_draft_letter": "",
         "current_simplified_text": "",
         "current_metrics": {},
@@ -621,6 +589,9 @@ async def run_graph_execution(app, complex_text: str, reference_text: str) -> Di
         for node_name, updates in output.items():
             for key, value in updates.items():
                 final_state[key] = value
+
+            if node_name == "guardrail":
+                continue
 
             card_html = format_update_card(node_name, updates, final_state)
             stream_entries.append(card_html)
@@ -647,6 +618,12 @@ def main() -> None:
 
     if "reference_text" not in st.session_state:
         st.session_state.reference_text = ""
+
+    if "guardrail_triggered" not in st.session_state:
+        st.session_state.guardrail_triggered = False
+
+    if "guardrail_message" not in st.session_state:
+        st.session_state.guardrail_message = ""
 
     if "show_results" not in st.session_state:
         st.session_state.show_results = False
@@ -701,6 +678,12 @@ def main() -> None:
             
             submitted = st.form_submit_button("Simplify")
         
+        # Container for guardrail error message
+        error_container = st.empty()
+        if st.session_state.get("guardrail_triggered", False):
+            with error_container.container():
+                st.error(st.session_state.get("guardrail_message", ""))
+
         examples_placeholder = st.empty()
 
         # 2. METEMOS TODOS LOS EJEMPLOS DENTRO DE LA CAJA
@@ -740,6 +723,9 @@ def main() -> None:
                                     st.session_state.input_text = example["complex"]
                                     st.session_state.reference_text = example.get("simple", DEFAULT_REFERENCE_TEXT)
                                     st.session_state.show_results = False
+                                    st.session_state.guardrail_triggered = False
+                                    st.session_state.guardrail_message = ""
+                                    error_container.empty()
                                     st.rerun()
                 
                 # Navigation row 
@@ -771,6 +757,11 @@ def main() -> None:
                 return
 
             st.session_state.input_text = user_text_stripped
+            
+            # Clear guardrail state to re-check
+            st.session_state.guardrail_triggered = False
+            st.session_state.guardrail_message = ""
+            error_container.empty()
 
             # If no reference was selected (manual input), set it to empty.
             # If an example was selected, keep the example's reference_text.
@@ -834,65 +825,12 @@ def main() -> None:
                 # 4. Limpieza y chequeo del guardaraíl
                 loading_placeholder.empty()
 
-                # Si el guardaraíl fue activado, mostrar mensaje de rechazo y volver a mostrar ejemplos
                 if final_state.get("guardrail_triggered", False):
-                    st.error(
-                        f"❌ **Input out of scope**\n\n{final_state.get('guardrail_message', 'Please provide a medical or biomedical text.')}"
-                    )
-                    st.divider()
-                    
-                    # Recrear la sección de ejemplos
-                    st.markdown("### Example Texts")
-                    st.markdown("Navigate through examples and select one to try:")
-                    
-                    examples = load_examples()
-                    if examples:
-                        examples_per_view = 3
-                        total_examples = len(examples)
-                        max_index = max(0, total_examples - examples_per_view)
-                        
-                        carousel_items = examples[st.session_state.carousel_index:st.session_state.carousel_index + examples_per_view]
-                        cols = st.columns(len(carousel_items))
-                        
-                        for col_idx, example in enumerate(carousel_items):
-                            with cols[col_idx]:
-                                with st.container(border=True):
-                                    st.markdown(f"<div style='font-size: 1.15rem; font-weight: 700; margin-bottom: 10px;'> Abstract: {html.escape(example['pair_id'])}</div>", unsafe_allow_html=True)
-                                    
-                                    st.markdown(
-                                        f"<div style='height: 200px; overflow-y: auto; font-size: 1rem; "
-                                        f"margin-bottom: 20px; padding-right: 8px; line-height: 1.6; color: #31333F;'>"
-                                        f"{html.escape(example['complex'])}"
-                                        f"</div>",
-                                        unsafe_allow_html=True
-                                    )
-                                    
-                                    c1, c2, c3 = st.columns([1, 1.5, 1])
-                                    with c2:
-                                        if st.button("Use this example", key=f"example_retry_{example['id']}", use_container_width=True):
-                                            st.session_state.input_text = example["complex"]
-                                            st.session_state.reference_text = example.get("simple", DEFAULT_REFERENCE_TEXT)
-                                            st.rerun()
-                        
-                        nav_col1, spacer1, nav_col2, spacer2, nav_col3 = st.columns([0.75, 1.5, 4, 1.5, 0.75], vertical_alignment="center")
-                        
-                        with nav_col1:
-                            if st.button("◀ Previous", key="prev_examples_retry", use_container_width=True):
-                                st.session_state.carousel_index = (st.session_state.carousel_index - 1) % (max_index + 1)
-                                st.rerun()
-                        
-                        with nav_col2:
-                            current_start = st.session_state.carousel_index + 1
-                            current_end = min(st.session_state.carousel_index + examples_per_view, total_examples)
-                            st.markdown(
-                                f"<p style='text-align: center; color: #888; margin-top: 0.4rem;'>Showing {current_start}-{current_end} of {total_examples}</p>",
-                                unsafe_allow_html=True
-                            )
-                            
-                        with nav_col3:
-                            if st.button("Next ▶", key="next_examples_retry", use_container_width=True):
-                                st.session_state.carousel_index = (st.session_state.carousel_index + 1) % (max_index + 1)
-                                st.rerun()
+                    st.session_state.guardrail_triggered = True
+                    st.session_state.guardrail_message = "❌ Sorry, but the text you entered is outside the scope of the medical field. Please provide a medical abstract to simplify."
+                    st.session_state.show_results = False
+                    st.session_state.final_state = None
+                    st.rerun()
                 else:
                     # El guardaraíl pasó, mostrar resultados
                     st.session_state.final_state = final_state

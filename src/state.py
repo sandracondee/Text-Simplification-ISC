@@ -4,7 +4,6 @@ class GraphState(TypedDict):
     complex_text: str
     reference_text: str
     drafts: Dict[str, str]
-    is_input_in_scope: bool
     guardrail_triggered: bool
     guardrail_rationale: str
     guardrail_message: str

@@ -7,8 +7,14 @@ from src.agents.step_delay import pause_step_async
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 
+class MetricsData(BaseModel):
+    SARI: float = Field(description="The SARI score.")
+    BLEU: float = Field(description="The BLEU score.")
+    BERTScore: float = Field(description="The BERTScore F1 score.")
+    FKGL: float = Field(description="The FKGL score.")
+
 class ReadabilityResultWithMetrics(BaseModel):
-    metrics_report: dict = Field(description="The SARI, BLEU, BERTScore and FKGL values obtained from the tool.")
+    metrics_report: MetricsData = Field(description="The exact metrics returned by the calculate_metrics_for_current_draft tool.")    
     is_readability_approved: bool = Field(description="True if the text meets the readability standards for a general audience and metrics are acceptable. False otherwise.")
     feedback: str = Field(description="If is_readability_approved is False, provide specific instructions to fix it (e.g., 'Make sentences shorter in paragraph 2'). If True, leave empty.")
 
@@ -108,15 +114,13 @@ async def node_readability_evaluator(state: dict) -> dict:
         })
         
         result = response["structured_response"]
-
-        current_metrics = getattr(result, "metrics_report", {})
         
         await pause_step_async()
 
         return {
             "readability_evaluator_feedback": result.feedback,
             "is_readability_approved": result.is_readability_approved, 
-            "current_metrics": current_metrics
+            "current_metrics": result.metrics_report.model_dump() if has_reference else {}
         }
     
     except Exception as e:

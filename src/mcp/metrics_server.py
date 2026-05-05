@@ -12,7 +12,7 @@ def calculate_metrics(
     reference_text: str,
 ) -> dict:
     """Return simplification quality and readability metrics for a simplified text."""
-
+    
     return evaluator.calc_simplification_metrics(
         complex_text=complex_text,
         current_simplified_text=current_simplified_text,

@@ -17,7 +17,6 @@ class MetricsEvaluator:
         Receives the original text, the current simplified text given by the Plain Language Simplifier agent
         and the reference text.
         """
-        
         sources = [complex_text]
         predictions = [current_simplified_text]
         references = [[reference_text]]
