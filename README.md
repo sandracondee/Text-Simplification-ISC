@@ -20,8 +20,6 @@ Sistema multi-agente inteligente para simplificar documentos médicos complejos 
 
 El sistema implementa un flujo de trabajo **Draft-Select-Audit-Edit** mediante LangGraph:
 
-### Componentes principales
-
 ![Agentic workflow](assets/agent-workflow.png)
 
 1. **Parallel Drafters**: Generan 4 candidatos de simplificación (A/B/C/D) en paralelo
@@ -36,30 +34,13 @@ El sistema implementa un flujo de trabajo **Draft-Select-Audit-Edit** mediante L
 4. **Editor**: Aplica retroalimentación de auditoría y refina el texto
      - Loop guard: Máximo 3 iteraciones para evitar bucles infinitos
 
-### Flujo de ejecución
-
-```
-Texto Complejo
-    ↓
-[Parallel Drafters A-D]
-    ↓
-   Judge
-    ↓
-[Fact Checker | Readability Evaluator]
-    ↓
-   Editor
-    ↓
-Retroalimentación → Loop (máx 3 iteraciones)
-    ↓
-Texto Simplificado Validado
-```
-
 Para más detalles, consulta [src/graph/workflow.py](src/graph/workflow.py).
 
 ## Requisitos
 
 - **Python** >= 3.13
-- **pip** >= 23.0 (para gestión de dependencias)
+- **uv** (recomendado para instalar y ejecutar el proyecto)
+- **pip** >= 23.0 (alternativa de gestión de dependencias)
 - **Variables de entorno** configuradas para LLM (consulta [Configuración](#configuración))
 
 ### Dependencias principales
@@ -78,7 +59,22 @@ git clone https://github.com/usuario/Text-Simplification-ISC.git
 cd Text-Simplification-ISC
 ```
 
-### 2. Crea un entorno virtual (recomendado)
+### 2. Instala con `uv` (recomendado)
+
+`uv` es la opción recomendada para gestionar el entorno y las dependencias.
+
+```bash
+uv sync
+```
+
+Para ejecutar el proyecto con `uv`:
+
+```bash
+uv run python main.py
+uv run streamlit run app.py
+```
+
+### 3. Crea un entorno virtual manualmente (alternativa)
 
 ```bash
 # Con venv
@@ -90,7 +86,7 @@ conda create -n text-simplification python=3.13
 conda activate text-simplification
 ```
 
-### 3. Instala las dependencias
+### 4. Instala las dependencias manualmente (alternativa)
 
 ```bash
 pip install -e .
