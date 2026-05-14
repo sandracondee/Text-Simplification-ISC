@@ -71,6 +71,15 @@ cd Text-Simplification-ISC
 ```bash
 uv sync
 ```
+Para que el sistema pueda calcular métricas y realizar búsquedas, es necesario tener activos los servidores (MCP) en terminales separadas:
+
+```bash
+# Servidor de métricas
+uv run python -m src.mcp.metrics_server
+
+# Servidor de búsqueda
+uv run python -m src.mcp.search_server
+``
 
 Para ejecutar el proyecto con `uv`:
 
