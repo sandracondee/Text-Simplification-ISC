@@ -11,8 +11,7 @@ Sistema multi-agente inteligente para simplificar documentos médicos complejos 
 - [Arquitectura del sistema](#arquitectura-del-sistema)
 - [Requisitos](#requisitos)
 - [Instalación](#instalación)
-- [Uso](#uso)
-- [Configuración](#configuración)
+- [Interfaz de la aplicación](#interfaz-de-la-aplicación)
 - [Contribuir](#contribuir)
 - [Licencia](#licencia)
 
@@ -53,11 +52,11 @@ Implementación de los agentes en [src/agents/](src/agents/).
 - **LangChain & LangGraph**: Orquestación de agentes y workflows
 - **Streamlit**: Interfaz web interactiva
 - **Multiple LLM Providers**: Gemini, Groq, Mistral, Ollama, OpenAI
-- **Evaluación**: BERT-Score, BERTScore, textstat para métricas
+- **Evaluación**: BERTScore, textstat para otras métricas
 
 ## Instalación
 
-### 1. Clona el repositorio
+### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/sandracondee/Text-Simplification-ISC.git
@@ -71,7 +70,7 @@ Ejecutar este comando para copiar el contenido del fichero .env.example en un fi
 cp .env.example .env
 ```
 
-### 3. Instala con `uv` (recomendado)
+### 3. Instalar dependencias con `uv` (recomendado)
 
 `uv` es la opción recomendada para gestionar el entorno y las dependencias.
 
@@ -86,113 +85,61 @@ uv run python -m src.mcp.metrics_server
 
 # Servidor de búsqueda
 uv run python -m src.mcp.search_server
-``
+```
 
 Para ejecutar el proyecto con `uv`:
 
 ```bash
-uv run python main.py
 uv run streamlit run app.py
 ```
 
-### 5. Crea un entorno virtual manualmente (alternativa)
+Acceder a `http://localhost:8501` para utilizar el sistema.
+
+### 4. (Alternativa) Crear un entorno virtual manualmente 
 
 ```bash
 # Con venv
-python3.13 -m venv venv
+python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
 ```
-
-### 4. Instala las dependencias manualmente (alternativa)
+Instalar las dependencias con pip
 
 ```bash
 pip install -e .
 ```
 
-O instala manualmente desde pyproject.toml:
+Arrancar servidores mcp en terminales separadas
 
 ```bash
-pip install bert-score evaluate mcp langchain-core langchain-google-genai \
-  langchain-groq langchain-mistralai langchain-ollama langchain-openai \
-  langgraph numpy sacrebleu textstat streamlit
+# Servidor de métricas
+python -m src .mcp.metrics_server
+
+# Servidor de búsqueda
+python -m src .mcp.search_server
 ```
 
-## Uso
-
-### Ejecutar el workflow (CLI)
+Ejecutar la aplicación
 
 ```bash
-python main.py
+streamlit run app . py
 ```
 
-Este comando:
-1. Inicializa el sistema multi-agente
-2. Procesa un texto de ejemplo
-3. Muestra el progreso de cada etapa (Drafters, Judge, Auditors, Editor)
-4. Genera versiones simplificadas validadas
+Acceder a `http://localhost:8501` para utilizar el sistema.
 
-### Ejecutar la interfaz Streamlit (recomendado)
+## Interfaz de la aplicación
 
-```bash
-streamlit run app.py
-```
+Pantalla de inicio de la aplicación que muestra el área de entrada de texto y el selector de ejemplos.
 
-Accede a: `http://localhost:8501`
+![Interfaz principal](assets/interfaz-principal.png)
 
-**Características de la interfaz:**
-- Entrada de texto complejo
-- Visualización en tiempo real del progreso
-- Comparación de versiones
-- Métricas de legibilidad
-- Exportación de resultados
+Vista de resultados donde se presenta la versión simplificada del texto médico, incluyendo definiciones contextuales al pasar el ratón sobre los términos complejos.
 
-## Configuración
+![Salida del sistema](assets/salida-sistema.png)
 
-### Variables de entorno
+Proceso de razonamiento de los agentes del sistema.
 
-Crea un archivo `.env` en la raíz del proyecto:
-
-```bash
-cp .env.example .env
-```
-
-O establece manualmente las siguientes variables:
-
-| Variable | Descripción | Valores | Default |
-|---|---|---|---|
-| `LLM_PROVIDER` | Proveedor de LLM a usar | `gemini`, `ollama`, `groq`, `mistral`, `openai` | `gemini` |
-| `OLLAMA_MODEL` | Modelo de Ollama (si LLM_PROVIDER=ollama) | `mistral`, `llama2`, `neural-chat`, etc. | - |
-| `OLLAMA_BASE_URL` | URL base de Ollama | URL completa | `http://localhost:11434` |
-| `LOCAL_MODE` | Activar modo local con Ollama | `0` o `1` | `0` |
-| `GOOGLE_API_KEY` | Clave API de Google Gemini | Tu clave API | - |
-| `GROQ_API_KEY` | Clave API de Groq | Tu clave API | - |
-| `MISTRAL_API_KEY` | Clave API de Mistral | Tu clave API | - |
-| `OPENAI_API_KEY` | Clave API de OpenAI | Tu clave API | - |
-
-### Configuración de modelos específicos
-
-Puedes asignar modelos diferentes a cada rol usando variables de entorno:
-
-```bash
-export DRAFTER_MODEL_A=gemini-2.0-flash
-export DRAFTER_MODEL_B=gemini-1.5-pro
-export DRAFTER_MODEL_C=gemini-1.5-flash
-export DRAFTER_MODEL_D=gemini-1.5-flash
-export JUDGE_MODEL=gemini-2.0-flash
-export EDITOR_MODEL=gemini-1.5-pro
-```
-
-Si no se especifican, el sistema usa valores por defecto según el proveedor.
-
-### Ejemplo: Usar Ollama (LLM local)
-
-```bash
-export LLM_PROVIDER=ollama
-export OLLAMA_MODEL=mistral
-export LOCAL_MODE=1
-python main.py
-```
+![Razonamiento de los agentes](assets/razonamiento-agentes.png)
 
 ## Contribuir
 
@@ -203,13 +150,6 @@ Las contribuciones son bienvenidas 😊. Para contribuir:
 3. Realiza tus cambios y **commit** (`git commit -m 'Agregar: descripción de mejora'`)
 4. **Push** a tu rama (`git push origin feature/mi-mejora`)
 5. Abre un **Pull Request** describiendo los cambios
-
-### Pautas de contribución
-
-- Sigue el estilo de código existente
-- Incluye tests para nuevas funcionalidades
-- Actualiza la documentación si aplica
-- Documenta cambios en las variables de entorno
 
 ## Licencia
 
