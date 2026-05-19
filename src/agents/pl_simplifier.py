@@ -34,7 +34,6 @@ def _generate_single_draft(complex_text: str, model_name: str, provider: str) ->
     chain = prompt | simplifier_agent
     result = chain.invoke({"complex_text": complex_text})
     return result.current_simplified_text if provider != "deepseek" else result.content.strip()
-    # return complex_text.strip()
 
 
 def _resolve_provider() -> str:

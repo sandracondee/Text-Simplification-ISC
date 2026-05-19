@@ -65,28 +65,6 @@ async def node_term_explainer(state: dict) -> dict:
         )
         
         response = await agent.ainvoke({"messages": messages})
-
-        # response = {
-        #     "structured_response": TermExplanainerResult(
-        #         explanations=[
-        #             Explanation(
-        #                 searched_term="diabetes mellitus",
-        #                 dictionary_term="Diabetes Mellitus",
-        #                 explanation="A group of metabolic disorders characterized by high blood sugar levels over a prolonged period."
-        #             ),
-        #             Explanation(
-        #                 searched_term="glycosylated haemoglobin A1c",
-        #                 dictionary_term="Glycosylated Haemoglobin A1c",
-        #                 explanation="A measure of average blood sugar levels over the past 2-3 months."
-        #             ),
-        #             Explanation(
-        #                 searched_term="myocardial infarction",
-        #                 dictionary_term="Myocardial Infarction",
-        #                 explanation="A blockage of blood flow to the heart muscle, commonly known as a heart attack."
-        #             )
-        #         ]
-        #     )
-        # }
         
         result: TermExplanainerResult = response["structured_response"]
 

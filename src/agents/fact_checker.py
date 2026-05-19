@@ -51,14 +51,6 @@ def node_fact_checker(state: dict) -> dict:
         "current_simplified_text": state["current_simplified_text"]
     })
     
-
-    # TESTING
-    # result = FactCheckResult(
-    #     analysis="After a detailed comparison, all numerical data and clinical findings in the simplified text perfectly match the original abstract. No discrepancies were found.",
-    #     is_fact_approved=True,
-    #     feedback=""
-    # )
-
     pause_step_sync()
     
     return {

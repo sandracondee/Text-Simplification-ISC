@@ -50,12 +50,6 @@ def node_editor(state: dict) -> dict:
             "feedback": feedback
         })
 
-
-    # TESTING
-    # result = EditorResult(
-    #     corrected_text=state["current_simplified_text"]
-    # )
-
     pause_step_sync()
 
     return {

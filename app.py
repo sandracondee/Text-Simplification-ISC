@@ -772,8 +772,7 @@ def main() -> None:
                 graph = get_graph()
                 loading_placeholder = st.empty()
                 
-                # 1. Cargamos tu robot.png local
-                img_path = os.path.join(os.path.dirname(__file__), "robot.png")
+                img_path = os.path.join(os.path.dirname(__file__), "assets", "robot.png")
                 try:
                     img_base64 = get_local_img_as_base64(img_path)
                     img_src = f"data:image/png;base64,{img_base64}"

@@ -17,10 +17,8 @@ def guardrail_router(state: GraphState) -> str:
     Routes in-scope inputs into the simplification workflow and blocks out-of-scope inputs early.
     """
     if state.get("guardrail_triggered", False) or not state.get("is_input_in_scope", True):
-        #print("-> INPUT IS OUT OF SCOPE. Stopping the workflow at the guardrail.")
         return "end"
 
-    #print("-> INPUT ACCEPTED BY GUARDRAIL. Routing to simplification pipeline.")
     return "parallel_drafters"
 
 def node_auditors(state: GraphState) -> dict:
@@ -44,13 +42,7 @@ def router_logic(state: GraphState) -> str:
     readability_ok = state.get("is_readability_approved", False)
     approved = fact_ok and readability_ok
 
-    # print(
-    #     f"\n--- ROUTER: Iteration {state.get('iteration_count', 0)}, "
-    #     f"Fact: {fact_ok}, Readability: {readability_ok} ---"
-    # )
-
     if approved:
-        #print("-> AUDIT APPROVED. Workflow finished.")
         return "term_explainer"
 
     if state["iteration_count"] >= MAX_ITER:

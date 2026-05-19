@@ -61,12 +61,6 @@ def node_judge(state: dict) -> dict:
         }
     )
 
-    #TESTING
-    # result = JudgeResult(
-    #     rationale="Option A uses simpler language and shorter sentences, making it more accessible. Options B, C, and D contain more complex vocabulary and longer sentences that may be harder for a lay audience to understand.",
-    #     winner="A"
-    # )
-
     winner_letter = result.winner
     rationale = result.rationale
 

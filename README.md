@@ -63,8 +63,15 @@ Implementación de los agentes en [src/agents/](src/agents/).
 git clone https://github.com/sandracondee/Text-Simplification-ISC.git
 cd Text-Simplification-ISC
 ```
+### 2. Configurar variables de entorno
 
-### 2. Instala con `uv` (recomendado)
+Ejecutar este comando para copiar el contenido del fichero .env.example en un fichero .env y rellenar las API Keys correspondientes.
+
+```bash
+cp .env.example .env
+```
+
+### 3. Instala con `uv` (recomendado)
 
 `uv` es la opción recomendada para gestionar el entorno y las dependencias.
 
@@ -88,16 +95,13 @@ uv run python main.py
 uv run streamlit run app.py
 ```
 
-### 3. Crea un entorno virtual manualmente (alternativa)
+### 5. Crea un entorno virtual manualmente (alternativa)
 
 ```bash
 # Con venv
 python3.13 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# O con conda
-conda create -n text-simplification python=3.13
-conda activate text-simplification
 ```
 
 ### 4. Instala las dependencias manualmente (alternativa)
